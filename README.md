@@ -1,14 +1,12 @@
 T-962 reflow oven improvements
 ==============================
-Custom firmware for the cheap T-962 reflow oven utilizing the _existing_ controller hardware.
+This project is a fork of the original Unified Engineering firmware for the T-962 reflow oven. This version primarily changes the UI, as I wanted something a little more aesthetic. I added a pre-built .hex file to make it simple to update an oven without needing to install an IDE to build it!
 
- - [Wiki] for more info
- - [Hackaday post]
- - We have [Travis-CI] in place to build pull requests
+![Photo of boot splash screen](http://www.smashcat.org/av/T-962-2.jpg)
 
-### Introduction
+![Photo of new display mode](http://www.smashcat.org/av/display-mode-2-2.jpg)
 
-As we had use for a small reflow oven for a small prototype run we settled for the `T-962` even after having seen the negative reviews of it as there were plenty of suggestions all across the Internet on how it could be improved including replacing the existing controller and display(!). After having had a closer look at the hardware (replacing the masking tape inside with Kapton tape first) it was obvious that there was a simple way to improve the software disaster that is the T-962.
+Original project is here: [https://github.com/UnifiedEngineering/T-962-improvements] {Unified Engineering repo)
 
 
 ### Hardware improvements

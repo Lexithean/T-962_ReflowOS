@@ -52,6 +52,9 @@ static uint16_t numticks = 0;
 
 static int standby_logging = 0;
 
+uint8_t plotDot[TOTAL_DOTS];
+static int reflowPaused=0;
+
 static int32_t Reflow_Work(void) {
 	static ReflowMode_t oldmode = REFLOW_INITIAL;
 	static uint32_t lasttick = 0;
@@ -184,10 +187,29 @@ void Reflow_Init(void) {
 	PID_SetMode(&PID, PID_Mode_Manual);
 	PID.myOutput = 248; // Between fan and heat
 	PID_SetMode(&PID, PID_Mode_Automatic);
-	RTC_Zero();
+	RTC_Zero();	// reset RTC
+
+	// clear plotted dots
+	for(uint8_t n=0;n<TOTAL_DOTS;n++){
+		plotDot[n]=0;
+	}
+	reflowPaused=0;
 
 	// Start work
 	Sched_SetState(REFLOW_WORK, 2, 0);
+}
+
+void Reflow_TogglePause(void){
+	reflowPaused=(reflowPaused==1?0:1);
+	if(reflowPaused){
+		RTC_Hold();
+	}else{
+		RTC_Resume();
+	}
+}
+
+int Reflow_IsPaused(void){
+	return reflowPaused;
 }
 
 void Reflow_SetMode(ReflowMode_t themode) {
@@ -262,6 +284,7 @@ int32_t Reflow_Run(uint32_t thetime, float meastemp, uint8_t* pheat, uint8_t* pf
 			uint16_t value = Reflow_GetSetpointAtIdx(idx);
 			uint16_t value2 = Reflow_GetSetpointAtIdx(idx + 1);
 
+			// If current set temp and next are zero, then profile is over
 			if (value > 0 && value2 > 0) {
 				uint16_t avg = (value * (10 - offset) + value2 * offset) / 10;
 
@@ -288,7 +311,7 @@ int32_t Reflow_Run(uint32_t thetime, float meastemp, uint8_t* pheat, uint8_t* pf
 		int realx = (thetime / 5) + XAXIS;
 		int y = (uint16_t)(meastemp * 0.2f);
 		y = YAXIS - y;
-		LCD_SetPixel(realx, y);
+		plotDot[realx]=y;
 	}
 
 	if (NV_GetConfig(REFLOW_BANGBANG_MODE)) {
@@ -319,4 +342,17 @@ int32_t Reflow_Run(uint32_t thetime, float meastemp, uint8_t* pheat, uint8_t* pf
 
 void Reflow_ToggleStandbyLogging(void) {
 	standby_logging = !standby_logging;
+}
+
+// plot current reflow data on graph
+void Reflow_PlotDots(void){
+	LCD_FB_Clear();
+
+	Reflow_PlotProfile(-1);	// draws graph and plots profile
+	for(uint8_t n=XAXIS;n<TOTAL_DOTS;n++){
+		if(plotDot[n]>0){
+			LCD_SetPixel(n,plotDot[n]);
+		}
+	}
+
 }
