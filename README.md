@@ -4,6 +4,8 @@ A fork of the [Unified Engineering T-962 improvements](https://github.com/Unifie
 
 > **T-962C users:** See the [T-962C Guide](https://github.com/Lexithean/T-962-upgraded/wiki/T-962C-Guide) in the wiki for specific firmware settings and hardware fixes.
 
+> ⚠️ **Compatibility:** This firmware requires a T-962 with the **NXP LPC2134** MCU. Some 2024+ models (V2.0 board) use a different processor and are **not compatible**. [Check your board](https://github.com/Lexithean/T-962-upgraded/wiki/Troubleshooting) before flashing.
+
 ## Features (vs upstream)
 
 This fork merges the following improvements from upstream pull requests that were never merged into the original repo:
