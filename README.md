@@ -1,66 +1,86 @@
-T-962 reflow oven improvements
-==============================
-This project is a fork of the original Unified Engineering firmware for the T-962 reflow oven. This version primarily changes the UI, as I wanted something a little more aesthetic. I added a pre-built .hex file to make it simple to update an oven without needing to install an IDE to build it!
+# T-962 Reflow Oven — Improved Firmware
 
-![Photo of boot splash screen](http://www.smashcat.org/av/T-962-2.jpg)
+A fork of the [Unified Engineering T-962 improvements](https://github.com/UnifiedEngineering/T-962-improvements) firmware, incorporating community contributions and additional features for the T-962, T-962A, and **T-962C**.
 
-![Photo of new display mode](http://www.smashcat.org/av/display-mode-2-2.jpg)
+> **T-962C users:** See the [T-962C Guide](https://github.com/ImNoahDev/T-962-improvements/wiki/T-962C-Guide) in the wiki for specific firmware settings and hardware fixes.
 
-Original project is here: [https://github.com/UnifiedEngineering/T-962-improvements] {Unified Engineering repo)
+## Features (vs upstream)
 
+This fork merges the following improvements from upstream pull requests that were never merged into the original repo:
 
-### Hardware improvements
+### Thermocouple & Calibration
+- **Finer TC offset steps** — 0.10°C instead of 0.25°C for more precise calibration (#235)
+- **MAX31855 calibration** — TC gain/offset settings now apply to external thermocouple boards (#241)
+- **Wider TC offset range** — ±12.7°C offset range (was ±25°C with coarser steps) (#245)
 
-Here are a few improvements made to the cheap T-962 reflow oven utilizing the _existing_ controller hardware with only a small, cheap, but very necessary modification. As you have to open the top part of the oven anyway to reflash the software this is a no-brainer fix:
+### Operational Modes
+- **SPLIT mode** — Uses ambient TC control until a configurable threshold, then switches to PCB-surface thermocouple control for accurate reflow tracking (#136)
+- **MAXTEMPOVERRIDE mode** — Any TC reading above a threshold overrides the average, useful for sensitive components (#136)
+- **Bang-bang heater control** — ON/OFF heater drive instead of PID, dramatically improves T-962C heating (fork addition)
+- **Preheat phase** — Configurable preheat temperature before profile clock starts (fork addition)
 
-#### Replace stinky masking tape
+### UI Improvements
+- **Improved About screen** with version info and credits (#159)
+- **Screensaver** with configurable timeout (#159)
+- **Setup menu min/max labels** — Shows human-readable limits at range boundaries (#159)
+- **Shorter TC labels** — Prevents LCD buffer overflow on long offset values (#155)
 
+### Stability & Compatibility
+- **LCD buffer overflow fix** — Prevents crashes from long strings (#245)
+- **DS18S20 support** — Handles the older DS18S20 1-wire temperature sensor variant (#148)
+- **Binary serial command interface** — CRC-validated protocol for uploading custom profiles via UART (#136)
+- **PlatformIO support** — Build with `pio run` in addition to `make` (#207)
+
+### Build & CI
+- **GitHub Actions CI/CD** — Automatic firmware builds on push/PR, release artifact upload
+- **Node.js 24 compatible** — Updated action versions for long-term support
+
+---
+
+## Hardware Improvements
+
+Here are a few improvements made to the T-962 reflow oven utilizing the _existing_ controller hardware:
+
+#### Replace masking tape
 Instructable suggesting [replacing masking tape with kapton tape](http://www.instructables.com/id/T962A-SMD-Reflow-Oven-FixHack/?ALLSTEPS).
 
 #### Cold junction compensation
-
-The existing controller makes the assumption that the cold-junction is at 20 degrees Celsius at all times which made keeping a constant temperature "a bit" challenging as the terminal block sits _on_top_of_an_oven_ with two TRIACs nearby.
-We can fix this by adding a temperature sensor to the connector block where the thermocouples are connected to the controller board.
-It turns out that both an analog input and at least one generic GPIO pin is available on unpopulated pads on the board. GPIO0.7 in particular was very convenient for 1-wire operation as there was an adjacent pad with 3.3V so a 4k7 pull-up resistor could be placed there, then a jumper wire is run from GPIO0.7 pad to the `Dq` pin of a cheap [DS18B20] 1-wire temperature sensor that gets epoxied to the terminal block, soldering both `Vcc` and ground pins to the ground plane conveniently located right next to it. Some hot-glue may have to be removed to actually get to the side of the connector and the ground plane, someone seems to have been really trigger-happy with the glue gun!
-
-[Wiki: cold junction compensation mod](https://github.com/UnifiedEngineering/T-962-improvements/wiki)
-
+The factory firmware assumes a 20°C cold-junction at all times. Add a [DS18B20] temperature sensor to the TC terminal block for proper compensation. See the [wiki](https://github.com/ImNoahDev/T-962-improvements/wiki) for full instructions.
 
 #### Check mains earth connection
-
-As mentioned elsewhere, make sure the protective earth/ground wire from the main input actually makes contact with the back panel of the chassis and also that the back panel makes contact both with the top and bottom halves of the oven!
+Make sure the protective earth wire makes contact with the back panel and that both halves of the oven chassis are connected.
 
 #### System fan PWM control
+The system fan can be speed-controlled via the spare `ADO` test point. See [wiki: system fan PWM mod](https://github.com/ImNoahDev/T-962-improvements/wiki/System-fan-control).
 
-The system fan is very noisy an can be turned of most of the time. The custom firmware uses spare `ADO` test point to control it.
+---
 
-[Wiki: system fan PWM mod](https://github.com/UnifiedEngineering/T-962-improvements/wiki/System-fan-control)
+## Building
 
-### New firmware
+### Make (gcc-arm-none-eabi)
+See `COMPILING.md` for toolchain setup.
 
-The firmware was originally built with LPCXpresso 7.5.0 as I've never dealt with the LPC2000-series NXP microcontrollers before so I just wanted something that wouldn't require TOO much of work to actually produce a flashable image. Philips LPC2000 Flash Utility v2.2.3 was used to flash the controller through the ISP header present on the board.
+### PlatformIO
+```bash
+pio run
+```
 
-LPCXpresso requires activation but is free for everything but large code sizes (the limit is larger than the 128kB flash size on this controller anyway so it's not really an issue). The flash utility unfortunately only runs on Windows but Flash Magic is an alternative (see Wiki for more flashing instructions).
+The MCU is an LPC2134/01 (128kB flash / 16kB RAM, 55.296MHz). See the [Wiki] for flashing instructions.
 
-With help from the community the project now also builds standalone using the standard `gcc-arm-none-eabi` toolchain, see `COMPILING.md` for more information.
+---
 
-The MCU in this particular oven is an LPC2134/01 with 128kB flash/16kB RAM, stated to be capable of running at up to 60MHz. Unfortunately the PLL in this chip is not that clever so with the supplied XTAL at 11.0592MHz we can only reach 55.296MHz (5x multiplier). Other variants exist, the [Wiki] has more information about this.
+## Contributing
 
-wiki: [Flashing firmware]
+This firmware runs on T-962, T-962A, and T-962C ovens. Success/failure reports are welcome! Released under GPLv3.
 
-### Contributing
-This is mainly tested on a fairly recent build of the T-962 (smallest version), build time on the back panel states 14.07 which I assume means 2014 July (or less likely week 7 of 2014), success/failure reports from other users are welcome!
+## Acknowledgements
+- [Unified Engineering](https://github.com/UnifiedEngineering/T-962-improvements) — original improved firmware
+- [Smashcat](https://github.com/Smashcat) — UI improvements (#159)
+- [C PID Library - Version 1.0.1, GPLv3]
+- Community contributors: PRs #136, #148, #155, #207, #235, #241, #245, #252
 
-This is very much a quick hack to get only the basic functionality needed up and running. Everything in here is released under the GPLv3 license in hopes that it might be interesting for others to improve on this. Feedback is welcome!
-
-Happy hacking!
-
-# Acknowledgements
-This project is using the [C PID Library - Version 1.0.1, GPLv3]
-
-[wiki]: https://github.com/UnifiedEngineering/T-962-improvements/wiki
-[Travis-CI]: https://travis-ci.org/UnifiedEngineering/T-962-improvements
-[Flashing firmware]: https://github.com/UnifiedEngineering/T-962-improvements/wiki/Flashing-the-LPC21xx-controller
+[wiki]: https://github.com/ImNoahDev/T-962-improvements/wiki
+[Flashing firmware]: https://github.com/ImNoahDev/T-962-improvements/wiki/Flashing-the-LPC21xx-controller
 [DS18B20]: http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf
 [hackaday post]: http://hackaday.com/2014/11/27/improving-the-t-962-reflow-oven/
-[C PID Library - Version 1.0.1, GPLv3]:https://github.com/mblythe86/C-PID-Library
+[C PID Library - Version 1.0.1, GPLv3]: https://github.com/mblythe86/C-PID-Library
