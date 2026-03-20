@@ -55,13 +55,6 @@ This is mainly tested on a fairly recent build of the T-962 (smallest version), 
 
 This is very much a quick hack to get only the basic functionality needed up and running. Everything in here is released under the GPLv3 license in hopes that it might be interesting for others to improve on this. Feedback is welcome!
 
-### T-962C specific settings
-
-The T-962C (largest oven) has insufficient thermal power density to follow reflow profiles with PID-based PWM control. Two new options in the Settings menu can help:
-
-- **Bang-bang heat** (0/1, default 0): Set to `1` to drive heaters at 100% or 0% instead of PWM. IR heaters in the T-962C perform poorly when pulsed and need full power to ramp effectively. Not needed for the smaller T-962/T-962A.
-- **Preheat temp** (30-80°C, default 50°C): Heats the oven to this temperature before the reflow profile clock starts, eliminating thermal lag from the large cavity.
-
 Happy hacking!
 
 # Acknowledgements
