@@ -125,7 +125,7 @@ void Reflow_ValidateNV(void) {
 	}
 
 	if (NV_GetConfig(REFLOW_BANGBANG_MODE) == 255) {
-		NV_SetConfig(REFLOW_BANGBANG_MODE, 1); // Default ON (bang-bang)
+		NV_SetConfig(REFLOW_BANGBANG_MODE, 0); // Default OFF (PID control)
 	}
 
 	Reflow_SelectProfileIdx(NV_GetConfig(REFLOW_PROFILE));
