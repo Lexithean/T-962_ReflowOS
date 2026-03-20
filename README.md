@@ -2,7 +2,7 @@
 
 A fork of the [Unified Engineering T-962 improvements](https://github.com/UnifiedEngineering/T-962-improvements) firmware, incorporating community contributions and additional features for the T-962, T-962A, and **T-962C**.
 
-> **T-962C users:** See the [T-962C Guide](https://github.com/ImNoahDev/T-962-improvements/wiki/T-962C-Guide) in the wiki for specific firmware settings and hardware fixes.
+> **T-962C users:** See the [T-962C Guide](https://github.com/Lexithean/T-962-upgraded/wiki/T-962C-Guide) in the wiki for specific firmware settings and hardware fixes.
 
 ## Features (vs upstream)
 
@@ -45,13 +45,13 @@ Here are a few improvements made to the T-962 reflow oven utilizing the _existin
 Instructable suggesting [replacing masking tape with kapton tape](http://www.instructables.com/id/T962A-SMD-Reflow-Oven-FixHack/?ALLSTEPS).
 
 #### Cold junction compensation
-The factory firmware assumes a 20°C cold-junction at all times. Add a [DS18B20] temperature sensor to the TC terminal block for proper compensation. See the [wiki](https://github.com/ImNoahDev/T-962-improvements/wiki) for full instructions.
+The factory firmware assumes a 20°C cold-junction at all times. Add a [DS18B20] temperature sensor to the TC terminal block for proper compensation. See the [wiki](https://github.com/Lexithean/T-962-upgraded/wiki) for full instructions.
 
 #### Check mains earth connection
 Make sure the protective earth wire makes contact with the back panel and that both halves of the oven chassis are connected.
 
 #### System fan PWM control
-The system fan can be speed-controlled via the spare `ADO` test point. See [wiki: system fan PWM mod](https://github.com/ImNoahDev/T-962-improvements/wiki/System-fan-control).
+The system fan can be speed-controlled via the spare `ADO` test point. See [wiki: system fan PWM mod](https://github.com/Lexithean/T-962-upgraded/wiki/System-fan-control).
 
 ---
 
@@ -75,12 +75,21 @@ This firmware runs on T-962, T-962A, and T-962C ovens. Success/failure reports a
 
 ## Acknowledgements
 - [Unified Engineering](https://github.com/UnifiedEngineering/T-962-improvements) — original improved firmware
-- [Smashcat](https://github.com/Smashcat) — UI improvements (#159)
+- [ImNoahDev](https://github.com/ImNoahDev) — T-962C bang-bang heater control, preheat phase, fork maintenance
+- [KLEYNOD](https://github.com/UnifiedEngineering/T-962-improvements/issues/267) — bang-bang heating concept, delta rewiring research
+- [Smashcat](https://github.com/Smashcat) — UI improvements, screensaver ([#159](https://github.com/UnifiedEngineering/T-962-improvements/pull/159))
+- [radensb](https://github.com/radensb) — SPLIT/MAXTEMPOVERRIDE modes, binary command interface ([#136](https://github.com/UnifiedEngineering/T-962-improvements/pull/136))
+- [ardiehl](https://github.com/ardiehl) — DS18S20 sensor support ([#148](https://github.com/UnifiedEngineering/T-962-improvements/pull/148))
+- [maxgerhardt](https://github.com/maxgerhardt) — PlatformIO support ([#207](https://github.com/UnifiedEngineering/T-962-improvements/pull/207))
+- [mcapdeville](https://github.com/mcapdeville) — LCD buffer overflow fix ([#245](https://github.com/UnifiedEngineering/T-962-improvements/pull/245))
+- [georgeharker](https://github.com/georgeharker) — MAX31855 calibration ([#241](https://github.com/UnifiedEngineering/T-962-improvements/pull/241))
+- [CoryCharlton](https://github.com/CoryCharlton) — finer TC offset steps ([#235](https://github.com/UnifiedEngineering/T-962-improvements/pull/235))
+- [nica-f](https://github.com/nica-f) — LCD text printing fixes ([#155](https://github.com/UnifiedEngineering/T-962-improvements/pull/155))
+- [cinderblock](https://github.com/cinderblock) — URL typo fix ([#252](https://github.com/UnifiedEngineering/T-962-improvements/pull/252))
 - [C PID Library - Version 1.0.1, GPLv3]
-- Community contributors: PRs #136, #148, #155, #207, #235, #241, #245, #252
 
-[wiki]: https://github.com/ImNoahDev/T-962-improvements/wiki
-[Flashing firmware]: https://github.com/ImNoahDev/T-962-improvements/wiki/Flashing-the-LPC21xx-controller
+[wiki]: https://github.com/Lexithean/T-962-upgraded/wiki
+[Flashing firmware]: https://github.com/Lexithean/T-962-upgraded/wiki/Flashing-the-LPC21xx-controller
 [DS18B20]: http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf
 [hackaday post]: http://hackaday.com/2014/11/27/improving-the-t-962-reflow-oven/
 [C PID Library - Version 1.0.1, GPLv3]: https://github.com/mblythe86/C-PID-Library
