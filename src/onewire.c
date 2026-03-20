@@ -45,6 +45,8 @@ static inline uint32_t getpin() {
 }
 
 static inline uint32_t xferbyte(uint32_t thebyte) {
+	uint32_t save = VIC_DisableIRQ();
+
 	for (uint32_t bits = 0; bits < 8; bits++) {
 		setpin0();
 		BusyWait(TICKS_US(1.5)); // 1.5us
@@ -56,10 +58,14 @@ static inline uint32_t xferbyte(uint32_t thebyte) {
 		setpinhiz();
 		BusyWait(TICKS_US(10));
 	}
+
+	VIC_RestoreIRQ(save); //Enable interrupts
 	return thebyte;
 }
 
 static inline uint32_t xferbit(uint32_t thebit) {
+	uint32_t save = VIC_DisableIRQ();
+
 	setpin0();
 	BusyWait(TICKS_US(1.5));
 	if (thebit) setpinhiz();
@@ -69,11 +75,14 @@ static inline uint32_t xferbit(uint32_t thebit) {
 	BusyWait(TICKS_US(45));
 	setpinhiz();
 	BusyWait(TICKS_US(10));
+
+	VIC_RestoreIRQ(save); //Enable interrupts
 	return thebit;
 }
 
 static inline uint32_t resetbus(void) {
 	uint32_t devicepresent = 0;
+	uint32_t save = VIC_DisableIRQ();
 
 	setpin0();
 	BusyWait(TICKS_US(480));
@@ -82,6 +91,8 @@ static inline uint32_t resetbus(void) {
 	if (getpin() == 0) devicepresent = 1;
 	BusyWait(TICKS_US(410));
 
+	VIC_RestoreIRQ(save); //Enable interrupts
+//	BusyWait(TICKS_US(500));
 	return devicepresent;
 }
 
@@ -273,10 +284,16 @@ static int OWNext() {
 
 static void selectdevbyidx(int idx) {
 	if (idx < numowdevices) {
+//		uint32_t save = VIC_DisableIRQ(); //Disable interrupts
 		resetbus();
+//		VIC_RestoreIRQ(save); //Enable interrupts
+//		save = VIC_DisableIRQ();
 		xferbyte(OW_MATCH_ROM);
+//		VIC_RestoreIRQ(save);
 		for (int idloop = 0; idloop < 8; idloop++) { // Send ROM device ID
+//			save = VIC_DisableIRQ();
 			xferbyte(owdeviceids[idx][idloop]);
+//			VIC_RestoreIRQ(save);
 		}
 	}
 }
@@ -289,34 +306,37 @@ static int32_t OneWire_Work(void) {
 	int16_t tmp;
 
 	if (mystate == 0) {
-		uint32_t save = VIC_DisableIRQ();
+//		uint32_t save = VIC_DisableIRQ();
 		if (resetbus()) {
+//			VIC_RestoreIRQ(save);
+//			save = VIC_DisableIRQ();
 			xferbyte(OW_SKIP_ROM); // All devices on the bus are addressed here
+//			VIC_RestoreIRQ(save);
+//			save = VIC_DisableIRQ();
 			xferbyte(OW_CONVERT_T);
 			setpin1();
 			//retval = TICKS_MS(94); // For 9-bit resolution
 			retval = TICKS_MS(100); // TC interface needs max 100ms to be ready
 			mystate++;
 		}
-		VIC_RestoreIRQ( save );
+//		VIC_RestoreIRQ( save );
 	} else if (mystate == 1) {
 		for (int i = 0; i < numowdevices; i++) {
-			uint32_t save = VIC_DisableIRQ();
+			//uint32_t save = VIC_DisableIRQ();
 			selectdevbyidx(i);
+//			uint32_t save = VIC_DisableIRQ();
 			xferbyte(OW_READ_SCRATCHPAD);
 			uint8_t family = owdeviceids[i][0];
 			if (family == OW_FAMILY_TEMP3) numBytesToRead = 7;			// AD: for the DS18S20 read 7 bytes into scratchpad
 			for (uint32_t iter = 0; iter < numBytesToRead; iter++) {	// Read bytes into scratch
 				scratch[iter] = xferbyte(0xff);
+//				VIC_RestoreIRQ(save);
 			}
-			VIC_RestoreIRQ(save);
 			if (family == OW_FAMILY_TEMP3) {  // AD: DS18S20
 				tmp = scratch[0];
 				if (scratch[1]) tmp = tmp * -1;
 				// For the DS18S20, use COUNT_REMAIN to calculate 12 bit value
 				devreadout[i] = ((tmp & 0xFFFE) << 3) +12 - scratch[6]; // 6:COUNT_REMAIN
-				//printf("%s: [%d] read: %d(%d), devreadout: %d, COUNT_REMAIN: %d Scratchpad: %02x %02x %02x %02x %02x %02x %02x %02x\n", __FUNCTION__, i, tmp, numBytesToRead,devreadout[i], scratch[6],
-				//  scratch[0],scratch[1],scratch[2],scratch[3],scratch[4],scratch[5],scratch[6],scratch[7]);
 			} else {
 				tmp = scratch[1]<<8 | scratch[0];
 				devreadout[i] = tmp;
@@ -342,17 +362,17 @@ uint32_t OneWire_Init(void) {
 		tcidmapping[i] = -1; // Assume we don't find any thermocouple interfaces
 	}
 
-	uint32_t save = VIC_DisableIRQ();
+//	uint32_t save = VIC_DisableIRQ();
 	int rslt = OWFirst();
-	VIC_RestoreIRQ( save );
+//	VIC_RestoreIRQ( save );
 
 	numowdevices = 0;
 	while (rslt && numowdevices < MAX_OW_DEVICES) {
 		memcpy(owdeviceids[numowdevices], ROM_NO, sizeof(ROM_NO));
 		numowdevices++;
-		save = VIC_DisableIRQ();
+//		save = VIC_DisableIRQ();
 		rslt = OWNext();
-		VIC_RestoreIRQ( save );
+//		VIC_RestoreIRQ( save );
 	}
 
 	if (numowdevices) {
@@ -371,17 +391,17 @@ uint32_t OneWire_Init(void) {
 				} else if (family == OW_FAMILY_TEMP3) {
 					sensorname = "DS18S20";
 				}
-				save = VIC_DisableIRQ();
+//				save = VIC_DisableIRQ();
 				selectdevbyidx(iter);
 				xferbyte(OW_WRITE_SCRATCHPAD);
 				xferbyte(0x00);
 				xferbyte(0x00);
 				xferbyte(0x1f); // Reduce resolution to 0.5C to keep conversion time reasonable
-				VIC_RestoreIRQ(save);
+//				VIC_RestoreIRQ(save);
 				tempidx = iter; // Keep track of where we saw the last/only temperature sensor
 				printf(" [%s Temperature sensor]", sensorname);
 			} else if (family == OW_FAMILY_TC) {
-				save = VIC_DisableIRQ();
+//				save = VIC_DisableIRQ();
 				selectdevbyidx(iter);
 				xferbyte(OW_READ_SCRATCHPAD);
 				xferbyte(0xff);
@@ -389,7 +409,7 @@ uint32_t OneWire_Init(void) {
 				xferbyte(0xff);
 				xferbyte(0xff);
 				uint8_t tcid = xferbyte(0xff) & 0x0f;
-				VIC_RestoreIRQ( save );
+//				VIC_RestoreIRQ( save );
 				tcidmapping[tcid] = iter; // Keep track of the ID mapping
 				printf(" [Thermocouple interface, ID %x]",tcid);
 			}

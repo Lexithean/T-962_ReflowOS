@@ -19,6 +19,8 @@ typedef enum eNVItem {
 
 	SCREENSAVER_ACTIVE,
 
+	OP_MODE,
+	MODE_THRESH,
 
 	NVITEM_NUM_ITEMS // Last value
 } NVItem_t;
