@@ -25,6 +25,8 @@
 #include "sched.h"
 
 #define NVMAGIC (('W' << 8) | 'J')
+#define NV_STORAGE_OFFSET 0xC4  // 196 (60 bytes available before end of 256B EEPROM)
+#define NV_STORAGE_OFFSET_OLD 0x62 // 98 (Overlapped with Profile 2)
 
 typedef struct __attribute__ ((__packed__)) {
 	uint16_t magic;
@@ -42,14 +44,44 @@ static void SetNVUpdatePending(void) {
 }
 
 void NV_Init(void) {
-	EEPROM_Read((uint8_t*)&myNV, 0x62, sizeof(myNV));
-	if (myNV.magic != NVMAGIC ) {
-		myNV.magic = NVMAGIC;
-		myNV.numitems = NVITEM_NUM_ITEMS;
-		memset(myNV.config, 0xff, NVITEM_NUM_ITEMS);
-		printf("\nNV initialization cleared %d items", NVITEM_NUM_ITEMS);
-		SetNVUpdatePending();
+	// 1. Try to read from the NEW location
+	EEPROM_Read((uint8_t*)&myNV, NV_STORAGE_OFFSET, sizeof(myNV));
+
+	if (myNV.magic != NVMAGIC) {
+		// 2. NEW location is empty. Check if there's data in the OLD location (Migration)
+		EEPROM_Read((uint8_t*)&myNV, NV_STORAGE_OFFSET_OLD, sizeof(myNV));
+
+		if (myNV.magic == NVMAGIC) {
+			printf("\nNV: Migrating data to safe EEPROM location...");
+
+			// A. Move Profile 2 first (from 130 to 98)
+			uint8_t profBuf[98];
+			EEPROM_Read(profBuf, 130, 98); // Legacy P2 start
+			EEPROM_Write(98, profBuf, 98); // New P2 start (immediately after P1)
+
+			// B. Move Settings to new location (196) and update numitems if needed
+			if (myNV.numitems < NVITEM_NUM_ITEMS) {
+				uint8_t bytestoclear = NVITEM_NUM_ITEMS - myNV.numitems;
+				memset(myNV.config + myNV.numitems, 0xff, bytestoclear);
+				myNV.numitems = NVITEM_NUM_ITEMS;
+			}
+			EEPROM_Write(NV_STORAGE_OFFSET, (uint8_t*)&myNV, sizeof(myNV));
+
+			// C. Clear old magic to finalize migration
+			uint16_t clearMagic = 0x0000;
+			EEPROM_Write(NV_STORAGE_OFFSET_OLD, (uint8_t*)&clearMagic, 2);
+
+			printf(" Done.");
+		} else {
+			// 3. Brand new initialization
+			myNV.magic = NVMAGIC;
+			myNV.numitems = NVITEM_NUM_ITEMS;
+			memset(myNV.config, 0xff, NVITEM_NUM_ITEMS);
+			printf("\nNV initialization cleared %d items", NVITEM_NUM_ITEMS);
+			SetNVUpdatePending();
+		}
 	} else if(myNV.numitems < NVITEM_NUM_ITEMS) {
+		// Existing settings at new location, just adding new items
 		uint8_t bytestoclear = NVITEM_NUM_ITEMS - myNV.numitems;
 		memset(myNV.config + myNV.numitems, 0xff, bytestoclear);
 		myNV.numitems = NVITEM_NUM_ITEMS;
@@ -86,7 +118,7 @@ int32_t NV_Work(void) {
 	if (count == 4) {
 		nvupdatepending = count = 0;
 		printf("\nFlushing NV copy to EE...");
-		EEPROM_Write(0x62, (uint8_t*)&myNV, sizeof(myNV));
+		EEPROM_Write(NV_STORAGE_OFFSET, (uint8_t*)&myNV, sizeof(myNV));
 	}
 	return nvupdatepending ? (TICKS_SECS(2)) : -1;
 }

@@ -118,7 +118,7 @@ void Reflow_LoadCustomProfiles(void) {
 	EEPROM_Read((uint8_t*)ee1.temperatures, 2, 96);
 	ByteswapTempProfile(ee1.temperatures);
 
-	EEPROM_Read((uint8_t*)ee2.temperatures, 128 + 2, 96);
+	EEPROM_Read((uint8_t*)ee2.temperatures, 98 + 2, 96); // Moved from 128+2 to 98+2
 	ByteswapTempProfile(ee2.temperatures);
 }
 
@@ -213,7 +213,7 @@ int Reflow_SaveEEProfile(void) {
 		offset = 0;
 		tempptr = ee1.temperatures;
 	} else if (profileidx == (NUMPROFILES - 1)) {
-		offset = 128;
+		offset = 98; // Moved from 128 to 98
 		tempptr = ee2.temperatures;
 	} else {
 		return -1;

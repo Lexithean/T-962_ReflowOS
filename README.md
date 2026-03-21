@@ -68,7 +68,7 @@ This fork merges the following improvements from upstream pull requests that wer
 
 ## Serial Commands
 
-The serial interface (57600 baud) allows full control and configuration.
+The serial interface (115200 baud) allows full control and configuration.
 
 > [!WARNING]
 > **Reflashing erases all Flash Profiles.** Unlike EEPROM settings, profiles stored in the MCU's internal flash ARE wiped when you update the firmware. Always use the `backup` command before updating!
