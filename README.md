@@ -21,6 +21,12 @@ This fork merges the following improvements from upstream pull requests that wer
 - **Bang-bang heater control** — ON/OFF heater drive instead of PID, dramatically improves T-962C heating (fork addition)
 - **Preheat phase** — Configurable preheat temperature before profile clock starts (fork addition)
 
+### Auto-Calibration
+- **Bang-bang auto-tune** — Runs 3 heat/cool cycles to measure thermal overshoot/undershoot, stores anticipatory offsets with live temperature graph (fork addition)
+- **PID auto-tune** — Ziegler-Nichols relay method, measures oscillation period/amplitude over 3 cycles to compute optimal Kp/Ki/Kd with live graph (fork addition)
+- **TC offset auto-calibration** — Uses cold junction sensor as reference at ambient temperature to auto-zero both thermocouples (fork addition)
+- All calibration modes accessible from setup menu or via serial commands (`bbtune`, `pidtune`, `tccal`)
+
 ### UI Improvements
 - **Improved About screen** with version info and credits (#159)
 - **Screensaver** with configurable timeout (#159)
@@ -31,6 +37,7 @@ This fork merges the following improvements from upstream pull requests that wer
 - **LCD buffer overflow fix** — Prevents crashes from long strings (#245)
 - **1-wire temperature sensor support** — DS18B20, DS18S20, and DS1822 all supported for cold junction compensation (#148)
 - **Binary serial command interface** — CRC-validated protocol for uploading custom profiles via UART (#136)
+- **Serial calibration commands** — `bbtune`, `pidtune`, `tccal` for headless auto-calibration via UART (fork addition)
 - **PlatformIO support** — Build with `pio run` in addition to `make` (#207)
 
 ### Build & CI
