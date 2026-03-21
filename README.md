@@ -27,6 +27,12 @@ This fork merges the following improvements from upstream pull requests that wer
 - **TC offset auto-calibration** — Uses cold junction sensor as reference at ambient temperature to auto-zero both thermocouples (fork addition)
 - All calibration modes accessible from setup menu or via serial commands (`bbtune`, `pidtune`, `tccal`)
 
+### Safety & Control
+- **Thermal runaway protection** — Aborts reflow/bake if temperature exceeds setpoint by a configurable threshold (0–50°C), with alarm buzzer and error screen (fork addition)
+- **Cooling rate control** — Limits fan speed to prevent thermal shock when cooling rate exceeds a configurable max (0–5.0°C/s) (fork addition)
+- **Audible stage alerts** — Buzzer beeps at ramp start (>100°C), reflow peak, and cooldown (<100°C) transitions (fork addition)
+- **Time remaining** — Countdown timer shown on reflow graph display (fork addition)
+
 ### UI Improvements
 - **Improved About screen** with version info and credits (#159)
 - **Screensaver** with configurable timeout (#159)
