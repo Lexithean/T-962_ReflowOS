@@ -33,8 +33,10 @@ This fork merges the following improvements from upstream pull requests that wer
 - **Thermal runaway protection** — Aborts reflow/bake if temperature exceeds setpoint by a configurable threshold (0–50°C), with alarm buzzer and error screen (fork addition)
 - **Heater failure detection** — Serial warning if temperature doesn't rise 5°C in 30s of full heat output (broken SSR/element detection) (fork addition)
 - **Cooling rate control** — Limits fan speed to prevent thermal shock when cooling rate exceeds a configurable max (0–5.0°C/s) (fork addition)
-- **Audible stage alerts** — Buzzer beeps at ramp start (>100°C), reflow peak, and cooldown (<100°C) transitions (fork addition)
+- **Audible stage alerts** — Distinct buzzer melodies for success and safety alarms (fork addition)
 - **Time remaining** — Countdown timer shown on reflow graph display (fork addition)
+- **Post-Reflow Analytics** — Displays Peak Temp, TAL (>217°C), and Max Ramp Rate upon completion (fork addition)
+- **Fan Kickstart** — Optional 250ms full-power pulse on startup to prevent low-speed fan stall (fork addition)
 - **Cold start detection** — Logs starting temperature and cold/warm status at reflow/bake start (fork addition)
 
 ### UI Improvements
@@ -55,6 +57,7 @@ This fork merges the following improvements from upstream pull requests that wer
 - **Profile naming** — `name profile N <name>` renames CUSTOM profile slots (fork addition)
 - **Dynamic Flash Profile Storage (v2.1.0)** — Support for up to 30 additional "Flash" profile slots using MCU internal memory (Sector 19, 8KB) (fork addition)
 - **Profile Backup & Restore (v2.1.0)** — Serial commands to dump/reload profiles to prevent data loss during firmware updates (fork addition)
+- **Enhanced Safety Logic (v2.2)** — 'SAFETY ABORT' UI feedback and state reset improvements (fork addition)
 - **PlatformIO support** — Build with `pio run` in addition to `make` (#207)
 
 ### Build & CI

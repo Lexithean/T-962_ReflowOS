@@ -225,6 +225,16 @@ static int32_t Reflow_Work(void) {
 		printf("\n# Time,  Temp0, Temp1, Temp2, Temp3,  Set,Actual, Heat, Fan,  ColdJ, Mode");
 		oldmode = mymode;
 		numticks = 0;
+		
+		// v2.2 Reset state for new cycle
+		if (mymode == REFLOW_REFLOW || mymode == REFLOW_BAKE) {
+			reflow_peak_temp = 0;
+			reflow_tal_ticks = 0;
+			reflow_max_ramp = 0;
+			reflow_ramp_calc_temp = 0;
+			reflowdone = 0;
+			runaway_detected = 0;
+		}
 	} else if (mymode == REFLOW_BAKE) {
 		if (bake_timer > 0 && numticks >= bake_timer) {
 			printf("\n DONE baking, set bake timer to 0.");

@@ -260,7 +260,11 @@ void displayReflowScreen(uint32_t keyspressed, uint8_t modeChange,uint8_t isDone
 
 		if(isDone==1){
 			LCD_BMPDisplay(exitbmp, 128 - 18, 64-18);
-			LCD_disp_str((uint8_t*)"REFLOW COMPLETE", 15, LCD_ALIGN_CENTER(15), 0, (blinkOn==1?FONT6X6|INVERT:FONT6X6));
+			if (Reflow_ThermalRunaway()) {
+				LCD_disp_str((uint8_t*)"SAFETY ABORT", 12, LCD_ALIGN_CENTER(12), 0, (blinkOn==1?FONT6X6|INVERT:FONT6X6));
+			} else {
+				LCD_disp_str((uint8_t*)"REFLOW COMPLETE", 15, LCD_ALIGN_CENTER(15), 0, (blinkOn==1?FONT6X6|INVERT:FONT6X6));
+			}
 			
 			// v2.2 Analytics Summary
 			len = snprintf(buf, sizeof(buf), "Peak: %3.1f C", Reflow_GetPeakTemp());
