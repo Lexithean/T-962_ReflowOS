@@ -30,9 +30,11 @@ This fork merges the following improvements from upstream pull requests that wer
 
 ### Safety & Control
 - **Thermal runaway protection** — Aborts reflow/bake if temperature exceeds setpoint by a configurable threshold (0–50°C), with alarm buzzer and error screen (fork addition)
+- **Heater failure detection** — Serial warning if temperature doesn't rise 5°C in 30s of full heat output (broken SSR/element detection) (fork addition)
 - **Cooling rate control** — Limits fan speed to prevent thermal shock when cooling rate exceeds a configurable max (0–5.0°C/s) (fork addition)
 - **Audible stage alerts** — Buzzer beeps at ramp start (>100°C), reflow peak, and cooldown (<100°C) transitions (fork addition)
 - **Time remaining** — Countdown timer shown on reflow graph display (fork addition)
+- **Cold start detection** — Logs starting temperature and cold/warm status at reflow/bake start (fork addition)
 
 ### UI Improvements
 - **Improved About screen** with version info and credits (#159)
@@ -47,6 +49,8 @@ This fork merges the following improvements from upstream pull requests that wer
 - **Serial calibration commands** — `bbtune`, `pidtune`, `tccal` for headless auto-calibration via UART (fork addition)
 - **Serial JSON output** — `json` command toggles machine-readable JSON output for PC graphing/logging tools (fork addition)
 - **Text-based profile import** — `import profile N t1,t2,...` for easy profile upload without binary protocol (fork addition)
+- **Profile export** — `export profile N` outputs in import-compatible format for round-trip editing (fork addition)
+- **Profile naming** — `name profile N <name>` renames CUSTOM profile slots (fork addition)
 - **PlatformIO support** — Build with `pio run` in addition to `make` (#207)
 
 ### Build & CI
