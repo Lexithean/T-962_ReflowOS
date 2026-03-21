@@ -1,6 +1,6 @@
 # T-962 ReflowOS
 
-**T-962 ReflowOS** is a maintained and improved fork of the [Unified Engineering T-962-improvements](https://github.com/UnifiedEngineering/T-962-improvements) firmware. This project is currently funded and maintained by **[Schemara.com](https://schemara.com)** (the AI-powered PCB & Schematic tools software by **Lexithean**).
+**T-962 ReflowOS** is a maintained and improved fork of the [Unified Engineering T-962-improvements](https://github.com/UnifiedEngineering/T-962-improvements) firmware. This project is currently funded and maintained by **[Schemara.com](https://schemara.com)** (the AI-powered PCB & Schematic tools software by **Lexithean**). 
 
 
 > **T-962C users:** See the [T-962C Guide](https://github.com/Lexithean/T-962_ReflowOS/wiki/T-962C-Guide) in the wiki for specific firmware settings and hardware fixes.
@@ -122,7 +122,7 @@ The MCU is an LPC2134/01 (128kB flash / 16kB RAM, 55.296MHz). See the [Wiki] for
 ## ⚠️ Disclaimer & Support
 **Use at your own risk.** This firmware is provided "as is" without any warranty. Schemara.com and Lexithean assume **no liability** for any issues, damage to property, or equipment failure resulting from the use of this software. 
 
-- **No Professional Support:** We do not offer professional or commercial support for this firmware.
+- **No Professional Support:** We do not offer professional or commercial support for this firmware. If you are interested in commercial/professional support please email us at [support@lexithean.com](mailto:support@lexithean.com).
 - **Community Help:** While we cannot take liability, we are happy to help via [GitHub Issues](https://github.com/Lexithean/T-962_ReflowOS/issues) in any way we can.
 
 ---
