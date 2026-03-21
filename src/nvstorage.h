@@ -1,8 +1,8 @@
 #ifndef NVSTORAGE_H_
 #define NVSTORAGE_H_
 
-// Right now we only have 28 bytes in total for NV storage, and 3 of those bytes
-// are used up for housekeeping so max 25 items will fit
+// NV storage is backed by I2C EEPROM. The current structure supports
+// up to 256 bytes of total state, providing ample room for configuration.
 // Only append to the end of this list to avoid backwards incompatibilities
 typedef enum eNVItem {
 	REFLOW_BEEP_DONE_LEN=0,
@@ -36,6 +36,7 @@ typedef enum eNVItem {
 	TC_RIGHT_OFFSET_HI,	// High-temp offset at 200°C (same encoding as TC_RIGHT_OFFSET)
 
 	TEMP_UNIT_FAHRENHEIT,	// 0=Celsius, 1=Fahrenheit display
+	REFLOW_FAN_KICKSTART,	// 0=OFF, 1=ON
 
 	NVITEM_NUM_ITEMS // Last value
 } NVItem_t;

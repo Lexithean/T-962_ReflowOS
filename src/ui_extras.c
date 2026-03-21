@@ -260,7 +260,20 @@ void displayReflowScreen(uint32_t keyspressed, uint8_t modeChange,uint8_t isDone
 
 		if(isDone==1){
 			LCD_BMPDisplay(exitbmp, 128 - 18, 64-18);
-			LCD_disp_str((uint8_t*)"COMPLETED", 9, LCD_ALIGN_CENTER(9), 0, (blinkOn==1?FONT6X6|INVERT:FONT6X6));
+			LCD_disp_str((uint8_t*)"REFLOW COMPLETE", 15, LCD_ALIGN_CENTER(15), 0, (blinkOn==1?FONT6X6|INVERT:FONT6X6));
+			
+			// v2.2 Analytics Summary
+			len = snprintf(buf, sizeof(buf), "Peak: %3.1f C", Reflow_GetPeakTemp());
+			LCD_disp_str((uint8_t*)buf, len, 5, 12, FONT6X6);
+			
+			len = snprintf(buf, sizeof(buf), "TAL (>217): %d s", Reflow_GetTAL());
+			LCD_disp_str((uint8_t*)buf, len, 5, 22, FONT6X6);
+			
+			len = snprintf(buf, sizeof(buf), "Max Ramp: %1.1f C/s", Reflow_GetMaxRamp());
+			LCD_disp_str((uint8_t*)buf, len, 5, 32, FONT6X6);
+
+			len = snprintf(buf, sizeof(buf), "Press F4 for menu");
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 54, FONT6X6);
 		}else{
 			LCD_BMPDisplay(stopbmp, 128 - 18, 0);
 

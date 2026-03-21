@@ -29,6 +29,7 @@
 #include "sched.h"
 #include "nvstorage.h"
 #include "sensor.h"
+#include "buzzer.h"
 #include "reflow.h"
 
 // Standby temperature in degrees Celsius
@@ -37,7 +38,7 @@
 // 250ms between each run
 #define PID_TIMEBASE (250)
 
-#define TICKS_PER_SECOND (1000 / PID_TIMEBASE)
+#define TICKS_PER_SECOND (1000.0f / (float)PID_TIMEBASE)
 
 static PidType PID;
 
@@ -70,6 +71,13 @@ static uint8_t heater_failure_warned = 0;
 
 // Cold start detection
 static uint8_t cold_start_logged = 0;
+
+// v2.2 Analytics
+static float reflow_peak_temp = 0;
+static uint32_t reflow_tal_ticks = 0;
+static float reflow_max_ramp = 0;
+static float reflow_ramp_calc_temp = 0;
+static uint8_t kickstart_active = 0;
 
 static int32_t Reflow_Work(void) {
 	static ReflowMode_t oldmode = REFLOW_INITIAL;
@@ -107,15 +115,49 @@ static int32_t Reflow_Work(void) {
 			modestr = "PREHEAT";
 			// Don't increment ticks - profile timer hasn't started
 		} else {
-			reflowdone = Reflow_Run(ticks, avgtemp, &heat, &fan, 0) ? 1 : 0;
+			uint8_t done_now = Reflow_Run(ticks, avgtemp, &heat, &fan, 0) ? 1 : 0;
+			if (done_now && !reflowdone) {
+				Buzzer_PlaySuccess();
+			}
+			reflowdone = done_now;
 			modestr = "REFLOW";
 		}
-
 	} else {
 		heat = fan = 0;
 	}
+
+	// Fan Kickstart logic (v2.2)
+	static uint8_t last_requested_fan = 0;
+	if (NV_GetConfig(REFLOW_FAN_KICKSTART) && fan > 0 && last_requested_fan == 0) {
+		kickstart_active = 1;
+	}
+	last_requested_fan = fan;
+
+	if (kickstart_active) {
+		Set_Fan(255);
+		kickstart_active = 0; // One cycle (250ms) is enough
+	} else {
+		Set_Fan(fan);
+	}
+
 	Set_Heater(heat);
-	Set_Fan(fan);
+
+	// Track Analytics (v2.2)
+	if (mymode == REFLOW_REFLOW || mymode == REFLOW_BAKE) {
+		if (avgtemp > reflow_peak_temp) reflow_peak_temp = avgtemp;
+		
+		// TAL (> 217C)
+		if (avgtemp > 217.0f) reflow_tal_ticks++;
+
+		// Ramp rate (calculated every second / 4 ticks)
+		if ((numticks & 0x03) == 0) {
+			if (reflow_ramp_calc_temp > 0) {
+				float ramp = avgtemp - reflow_ramp_calc_temp;
+				if (ramp > reflow_max_ramp) reflow_max_ramp = ramp;
+			}
+			reflow_ramp_calc_temp = avgtemp;
+		}
+	}
 
 	// Thermal runaway detection: abort if temp exceeds setpoint + threshold
 	if ((mymode == REFLOW_REFLOW || mymode == REFLOW_BAKE) && intsetpoint > 0) {
@@ -125,6 +167,7 @@ static int32_t Reflow_Work(void) {
 			       avgtemp, intsetpoint, thresh);
 			runaway_detected = 1;
 			reflowdone = 1;
+			Buzzer_PlayAlarm();
 			Reflow_SetMode(REFLOW_STANDBY);
 		}
 	}
@@ -308,6 +351,13 @@ void Reflow_SetMode(ReflowMode_t themode) {
 	// reset reflowdone if mode is set to standby.
 	if (themode == REFLOW_STANDBY)  {
 		reflowdone = 0;
+	}
+	// Reset analytics when starting a new operation
+	if (themode == REFLOW_REFLOW || themode == REFLOW_BAKE) {
+		reflow_peak_temp = 0;
+		reflow_tal_ticks = 0;
+		reflow_max_ramp = 0;
+		reflow_ramp_calc_temp = 0;
 	}
 }
 
@@ -829,3 +879,7 @@ int32_t Reflow_PIDTune_Work(uint8_t* pheat, uint8_t* pfan) {
 
 	return TICKS_MS(PID_TIMEBASE);
 }
+// v2.2 Getters for Summary UI
+float Reflow_GetPeakTemp(void) { return reflow_peak_temp; }
+int Reflow_GetTAL(void) { return (int)reflow_tal_ticks / TICKS_PER_SECOND; }
+float Reflow_GetMaxRamp(void) { return reflow_max_ramp; }

@@ -44,6 +44,7 @@ static setupMenuStruct setupmenu[] = {
 	{"L TC hi-off %+1.2f",		TC_LEFT_OFFSET_HI, 	 0, 254, -127, 0.10f,	"L TC hi-off   -12.70","L TC hi-off    12.70"},
 	{"R TC hi-off %+1.2f",		TC_RIGHT_OFFSET_HI, 	 0, 254, -127, 0.10f,	"R TC hi-off   -12.70","R TC hi-off    12.70"},
 	{"Temp unit    %4.0f",		TEMP_UNIT_FAHRENHEIT,	 0, 1, 0, 1.0f,		"Temp unit       DEG C","Temp unit       DEG F"},
+	{"Fan kickstart %4.0f",		REFLOW_FAN_KICKSTART,	 0, 1, 0, 1.0f,		"Fan kickstart     OFF","Fan kickstart      ON"},
 };
 
 #define NUM_SETUP_ITEMS (sizeof(setupmenu) / sizeof(setupmenu[0]))

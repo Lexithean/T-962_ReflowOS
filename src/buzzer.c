@@ -18,9 +18,21 @@
  */
 
 #include "LPC214x.h"
-#include "buzzer.h"
 #include <stdio.h>
+#include <stdint.h>
+#include "buzzer.h"
 #include "sched.h"
+#include "nvstorage.h"
+
+// v2.2 Melody state
+typedef enum {
+	MELODY_NONE = 0,
+	MELODY_SUCCESS,
+	MELODY_ALARM
+} Melody_t;
+
+static Melody_t current_melody = MELODY_NONE;
+static uint8_t melody_step = 0;
 
 static BuzzFreq_t requested_buzz_freq;
 static uint8_t requested_buzz_volume;
@@ -32,6 +44,20 @@ static int32_t requested_buzz_length;
  */
 
 static int32_t Buzzer_Work(void) {
+	if (current_melody == MELODY_SUCCESS) {
+		switch (melody_step++) {
+			case 0: case 2: case 4: FIO0SET = (1 << 21); return TICKS_MS(100);
+			case 1: case 3: FIO0CLR = (1 << 21); return TICKS_MS(50);
+			default: FIO0CLR = (1 << 21); current_melody = MELODY_NONE; return -1;
+		}
+	} else if (current_melody == MELODY_ALARM) {
+		switch (melody_step++) {
+			case 0: case 2: case 4: case 6: case 8: FIO0SET = (1 << 21); return TICKS_MS(150);
+			case 1: case 3: case 5: case 7: FIO0CLR = (1 << 21); return TICKS_MS(50);
+			default: FIO0CLR = (1 << 21); current_melody = MELODY_NONE; return -1;
+		}
+	}
+
 	if (requested_buzz_freq != BUZZ_NONE) {
 		FIO0SET = (1 << 21);
 		requested_buzz_freq = BUZZ_NONE;
@@ -51,9 +77,26 @@ void Buzzer_Init(void) {
 
 void Buzzer_Beep(BuzzFreq_t freq, uint8_t volume, int32_t ticks) {
 	if (ticks > 0 || freq == BUZZ_NONE) {
+		current_melody = MELODY_NONE; // Individual beep overrides melody
 		requested_buzz_freq = freq;
 		requested_buzz_volume = volume;
 		requested_buzz_length = ticks;
+		Sched_SetState(BUZZER_WORK, 2, 0);
+	}
+}
+
+void Buzzer_PlaySuccess(void) {
+	if (NV_GetConfig(REFLOW_BUZZER_ALERTS)) {
+		current_melody = MELODY_SUCCESS;
+		melody_step = 0;
+		Sched_SetState(BUZZER_WORK, 2, 0);
+	}
+}
+
+void Buzzer_PlayAlarm(void) {
+	if (NV_GetConfig(REFLOW_BUZZER_ALERTS)) {
+		current_melody = MELODY_ALARM;
+		melody_step = 0;
 		Sched_SetState(BUZZER_WORK, 2, 0);
 	}
 }

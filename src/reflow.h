@@ -90,4 +90,9 @@ float Reflow_PIDTune_GetKd(void);
 int32_t Reflow_PIDTune_Work(uint8_t* pheat, uint8_t* pfan);
 void Reflow_LoadPIDTuning(void);
 
+// v2.2 Analytics
+float Reflow_GetPeakTemp(void);
+int Reflow_GetTAL(void);
+float Reflow_GetMaxRamp(void);
+
 #endif /* REFLOW_H_ */

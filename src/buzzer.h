@@ -13,5 +13,7 @@ typedef enum eBuzzFreq {
 
 void Buzzer_Init(void);
 void Buzzer_Beep(BuzzFreq_t freq, uint8_t volume, int32_t ticks);
+void Buzzer_PlaySuccess(void);
+void Buzzer_PlayAlarm(void);
 
 #endif /* BUZZER_H_ */
