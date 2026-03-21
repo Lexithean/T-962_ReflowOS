@@ -1,10 +1,10 @@
-# T-962 Reflow Oven — Improved Firmware
+# T-962 ReflowOS
 
 A fork of the [Unified Engineering T-962 improvements](https://github.com/UnifiedEngineering/T-962-improvements) firmware, incorporating community contributions and additional features for the T-962, T-962A, and **T-962C**.
 
-> **T-962C users:** See the [T-962C Guide](https://github.com/Lexithean/T-962-upgraded/wiki/T-962C-Guide) in the wiki for specific firmware settings and hardware fixes.
+> **T-962C users:** See the [T-962C Guide](https://github.com/Lexithean/T-962_ReflowOS/wiki/T-962C-Guide) in the wiki for specific firmware settings and hardware fixes.
 
-> ⚠️ **Compatibility:** This firmware requires a T-962 with the **NXP LPC2134** MCU. Some 2024+ models (V2.0 board) use a different processor and are **not compatible**. [Check your board](https://github.com/Lexithean/T-962-upgraded/wiki/Troubleshooting) before flashing.
+> ⚠️ **Compatibility:** This firmware requires a T-962 with the **NXP LPC2134** MCU. Some 2024+ models (V2.0 board) use a different processor and are **not compatible**. [Check your board](https://github.com/Lexithean/T-962_ReflowOS/wiki/Troubleshooting) before flashing.
 
 ## Features (vs upstream)
 
@@ -94,13 +94,13 @@ Here are a few improvements made to the T-962 reflow oven utilizing the _existin
 Instructable suggesting [replacing masking tape with kapton tape](http://www.instructables.com/id/T962A-SMD-Reflow-Oven-FixHack/?ALLSTEPS).
 
 #### Cold junction compensation
-The factory firmware assumes a 20°C cold-junction at all times. Add a 1-wire temperature sensor to the TC terminal block for proper compensation. Compatible sensors: **DS18B20** (recommended), **DS18S20**, or **DS1822**. See the [wiki](https://github.com/Lexithean/T-962-upgraded/wiki) for installation instructions and the [Troubleshooting](https://github.com/Lexithean/T-962-upgraded/wiki/Troubleshooting) page for wiring details.
+The factory firmware assumes a 20°C cold-junction at all times. Add a 1-wire temperature sensor to the TC terminal block for proper compensation. Compatible sensors: **DS18B20** (recommended), **DS18S20**, or **DS1822**. See the [wiki](https://github.com/Lexithean/T-962_ReflowOS/wiki) for installation instructions and the [Troubleshooting](https://github.com/Lexithean/T-962_ReflowOS/wiki/Troubleshooting) page for wiring details.
 
 #### Check mains earth connection
 Make sure the protective earth wire makes contact with the back panel and that both halves of the oven chassis are connected.
 
 #### System fan PWM control
-The system fan can be speed-controlled via the spare `ADO` test point. See [wiki: system fan PWM mod](https://github.com/Lexithean/T-962-upgraded/wiki/System-fan-control).
+The system fan can be speed-controlled via the spare `ADO` test point. See [wiki: system fan PWM mod](https://github.com/Lexithean/T-962_ReflowOS/wiki/System-fan-control).
 
 ---
 
@@ -137,8 +137,8 @@ This firmware runs on T-962, T-962A, and T-962C ovens. Success/failure reports a
 - [cinderblock](https://github.com/cinderblock) — URL typo fix ([#252](https://github.com/UnifiedEngineering/T-962-improvements/pull/252))
 - [C PID Library - Version 1.0.1, GPLv3]
 
-[wiki]: https://github.com/Lexithean/T-962-upgraded/wiki
-[Flashing firmware]: https://github.com/Lexithean/T-962-upgraded/wiki/Flashing-the-LPC21xx-controller
+[wiki]: https://github.com/Lexithean/T-962_ReflowOS/wiki
+[Flashing firmware]: https://github.com/Lexithean/T-962_ReflowOS/wiki/Flashing-the-LPC21xx-controller
 [DS18B20]: http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf
 [hackaday post]: http://hackaday.com/2014/11/27/improving-the-t-962-reflow-oven/
 [C PID Library - Version 1.0.1, GPLv3]: https://github.com/mblythe86/C-PID-Library

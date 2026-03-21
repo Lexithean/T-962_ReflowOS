@@ -60,14 +60,15 @@ __attribute__((weak)) const char* Version_GetGitVersion(void) {
 }
 
 static char* format_about = \
-"\nT-962-controller open source firmware (%s)" \
+"\nT-962 ReflowOS (%s)" \
 "\n" \
-"\nSee https://github.com/UnifiedEngineering/T-962-improvements for more details." \
+"\nSee https://github.com/Lexithean/T-962_ReflowOS for more details." \
+"\n(Based on UnifiedEngineering/T-962-improvements)" \
 "\n" \
-"\nInitializing improved reflow oven...";
+"\nInitializing ReflowOS...";
 
 static char* help_text = \
-"\nT-962-controller serial interface.\n\n" \
+"\nT-962 ReflowOS serial interface.\n\n" \
 " about                   Show about + debug information\n" \
 " bake <setpoint>         Enter Bake mode with setpoint\n" \
 " bake <setpoint> <time>  Enter Bake mode with setpoint for <time> seconds\n" \
