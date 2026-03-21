@@ -317,12 +317,24 @@ int32_t Reflow_Run(uint32_t thetime, float meastemp, uint8_t* pheat, uint8_t* pf
 	if (NV_GetConfig(REFLOW_BANGBANG_MODE)) {
 		// Bang-bang control for T-962C: IR heaters perform poorly when pulsed
 		// via PWM. Drive at 100% or 0% and let thermal mass smooth the response.
-		if (meastemp < PID.mySetpoint) {
+		// Anticipatory offsets reduce overshoot/undershoot — use BB Tune to calibrate.
+		float heat_off = (float)NV_GetConfig(REFLOW_BB_HEAT_OFFSET);
+		float cool_off = (float)NV_GetConfig(REFLOW_BB_COOL_OFFSET);
+		if (heat_off >= 255) heat_off = 0; // Uninitialised NV
+		if (cool_off >= 255) cool_off = 0;
+
+		if (meastemp < (PID.mySetpoint - heat_off)) {
+			// Below target minus offset: full heat
 			*pheat = 255;
 			*pfan = NV_GetConfig(REFLOW_MIN_FAN_SPEED);
-		} else {
+		} else if (meastemp > (PID.mySetpoint + cool_off)) {
+			// Above target plus offset: full fan cooling
 			*pheat = 0;
-			*pfan = 255; // Full fan when overshooting to cool down
+			*pfan = 255;
+		} else {
+			// Dead zone: coast (no heat, minimum fan)
+			*pheat = 0;
+			*pfan = NV_GetConfig(REFLOW_MIN_FAN_SPEED);
 		}
 	} else {
 		// Original PID control
@@ -355,4 +367,154 @@ void Reflow_PlotDots(void){
 		}
 	}
 
+}
+
+// ============================================================================
+// Bang-Bang Auto-Tune
+// Measures thermal overshoot (heating) and undershoot (cooling) over multiple
+// cycles, averaging the results for a reliable anticipatory offset.
+// ============================================================================
+
+static BBTunePhase_t bbtune_phase = BBTUNE_PROMPT;
+static int bbtune_cycle = 0;
+static float bbtune_peak = 0;
+static float bbtune_trough = 999;
+static float bbtune_prev_temp = 0;
+static int bbtune_heat_sum = 0;
+static int bbtune_cool_sum = 0;
+static int bbtune_heat_result = 0;
+static int bbtune_cool_result = 0;
+
+void Reflow_BBTune_Start(void) {
+	bbtune_phase = BBTUNE_HEATING;
+	bbtune_cycle = 0;
+	bbtune_peak = 0;
+	bbtune_trough = 999;
+	bbtune_prev_temp = 0;
+	bbtune_heat_sum = 0;
+	bbtune_cool_sum = 0;
+	bbtune_heat_result = 0;
+	bbtune_cool_result = 0;
+	Reflow_SetMode(REFLOW_BBTUNE);
+}
+
+void Reflow_BBTune_Stop(void) {
+	bbtune_phase = BBTUNE_PROMPT;
+	Reflow_SetMode(REFLOW_STANDBY);
+}
+
+BBTunePhase_t Reflow_BBTune_GetPhase(void) {
+	return bbtune_phase;
+}
+
+int Reflow_BBTune_GetCycle(void) {
+	return bbtune_cycle;
+}
+
+int Reflow_BBTune_GetHeatOffset(void) {
+	return bbtune_heat_result;
+}
+
+int Reflow_BBTune_GetCoolOffset(void) {
+	return bbtune_cool_result;
+}
+
+int32_t Reflow_BBTune_Work(uint8_t* pheat, uint8_t* pfan) {
+	Sensor_DoConversion();
+	float temp = Sensor_GetTemp(TC_AVERAGE);
+
+	switch (bbtune_phase) {
+		case BBTUNE_HEATING:
+			// Full heat until we reach the high target
+			*pheat = 255;
+			*pfan = NV_GetConfig(REFLOW_MIN_FAN_SPEED);
+			if (temp >= (float)BBTUNE_TARGET_HIGH) {
+				// Reached target — switch to coast and track peak
+				bbtune_phase = BBTUNE_HEAT_COAST;
+				bbtune_peak = temp;
+				bbtune_prev_temp = temp;
+			}
+			break;
+
+		case BBTUNE_HEAT_COAST:
+			// Heaters off, min fan — wait for temp to peak and start falling
+			*pheat = 0;
+			*pfan = NV_GetConfig(REFLOW_MIN_FAN_SPEED);
+			if (temp > bbtune_peak) {
+				bbtune_peak = temp;
+			}
+			// Detect falling: temp dropped 2°C below peak (filters noise)
+			if (temp < (bbtune_peak - 2.0f)) {
+				int overshoot = (int)(bbtune_peak - (float)BBTUNE_TARGET_HIGH + 0.5f);
+				if (overshoot < 0) overshoot = 0;
+				bbtune_heat_sum += overshoot;
+				printf("\nBB Tune cycle %d: heat overshoot = %d C (peak %.1f)",
+				       bbtune_cycle + 1, overshoot, bbtune_peak);
+				// Move to cooling phase
+				bbtune_phase = BBTUNE_COOLING;
+			}
+			break;
+
+		case BBTUNE_COOLING:
+			// Full fan until we reach the low target
+			*pheat = 0;
+			*pfan = 255;
+			if (temp <= (float)BBTUNE_TARGET_LOW) {
+				// Reached target — switch to coast and track trough
+				bbtune_phase = BBTUNE_COOL_COAST;
+				bbtune_trough = temp;
+				bbtune_prev_temp = temp;
+			}
+			break;
+
+		case BBTUNE_COOL_COAST:
+			// Fan off — wait for temp to trough and start rising
+			*pheat = 0;
+			*pfan = 0;
+			if (temp < bbtune_trough) {
+				bbtune_trough = temp;
+			}
+			// Detect rising: temp rose 2°C above trough (filters noise)
+			if (temp > (bbtune_trough + 2.0f)) {
+				int undershoot = (int)((float)BBTUNE_TARGET_LOW - bbtune_trough + 0.5f);
+				if (undershoot < 0) undershoot = 0;
+				bbtune_cool_sum += undershoot;
+				printf("\nBB Tune cycle %d: cool undershoot = %d C (trough %.1f)",
+				       bbtune_cycle + 1, undershoot, bbtune_trough);
+
+				bbtune_cycle++;
+				if (bbtune_cycle >= BBTUNE_NUM_CYCLES) {
+					// All cycles done — average and store
+					bbtune_heat_result = (bbtune_heat_sum + BBTUNE_NUM_CYCLES / 2) / BBTUNE_NUM_CYCLES;
+					bbtune_cool_result = (bbtune_cool_sum + BBTUNE_NUM_CYCLES / 2) / BBTUNE_NUM_CYCLES;
+					if (bbtune_heat_result > 25) bbtune_heat_result = 25;
+					if (bbtune_cool_result > 25) bbtune_cool_result = 25;
+					NV_SetConfig(REFLOW_BB_HEAT_OFFSET, (uint8_t)bbtune_heat_result);
+					NV_SetConfig(REFLOW_BB_COOL_OFFSET, (uint8_t)bbtune_cool_result);
+					printf("\nBB Tune DONE: heat offset = %d C, cool offset = %d C",
+					       bbtune_heat_result, bbtune_cool_result);
+					bbtune_phase = BBTUNE_DONE;
+				} else {
+					// Next cycle — reset peak/trough and start heating again
+					bbtune_peak = 0;
+					bbtune_trough = 999;
+					bbtune_phase = BBTUNE_HEATING;
+				}
+			}
+			break;
+
+		case BBTUNE_DONE:
+			// Stay here until UI handles exit
+			*pheat = 0;
+			*pfan = NV_GetConfig(REFLOW_MIN_FAN_SPEED);
+			break;
+
+		default:
+			*pheat = 0;
+			*pfan = 0;
+			break;
+	}
+
+	// Return time until next call (same as PID timebase)
+	return TICKS_MS(PID_TIMEBASE);
 }

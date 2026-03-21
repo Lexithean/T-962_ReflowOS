@@ -168,6 +168,7 @@ typedef enum eMainMode {
 	MAIN_SELECT_PROFILE,
 	MAIN_EDIT_PROFILE,
 	MAIN_REFLOW,
+	MAIN_BBTUNE,
 	MAIN_SCREENSAVER,
 	MAIN_INIT
 } MainMode_t;
@@ -278,6 +279,16 @@ static int32_t Main_Work(void) {
 					printf("%d: ", i);
 					Setup_printFormattedValue(i);
 					printf("\n");
+				}
+
+			} else if (strcmp(serial_cmd, "bbtune") == 0) {
+				if (NV_GetConfig(REFLOW_BANGBANG_MODE)) {
+					printf("\nStarting bang-bang auto-tune (3 cycles)...\n");
+					Reflow_BBTune_Start();
+					mode = MAIN_BBTUNE;
+					retval = 0;
+				} else {
+					printf("\nBang-bang mode must be enabled first\n");
 				}
 
 			} else if (strcmp(serial_cmd, "stop") == 0) {
@@ -473,9 +484,16 @@ static int32_t Main_Work(void) {
 
 		// Leave setup
 		if (keyspressed & KEY_S) {
-			mode = MAIN_HOME;
-			Reflow_SetMode(REFLOW_STANDBY);
-			retval = 0; // Force immediate refresh
+			// If on bang-bang row and bang-bang is enabled, go to BB Tune
+			if (NV_GetConfig(REFLOW_BANGBANG_MODE) && selected >= 7 && selected <= 9) {
+				mode = MAIN_BBTUNE;
+				Reflow_SetMode(REFLOW_STANDBY);
+				retval = 0;
+			} else {
+				mode = MAIN_HOME;
+				Reflow_SetMode(REFLOW_STANDBY);
+				retval = 0; // Force immediate refresh
+			}
 		}
 
 
@@ -805,6 +823,114 @@ static int32_t Main_Work(void) {
 			retval = 0; // Force immediate refresh
 		}
 
+
+
+	// Bang-bang auto-tune
+	} else if (mode == MAIN_BBTUNE) {
+		LCD_FB_Clear();
+		retval = TICKS_MS(250);
+
+		BBTunePhase_t phase = Reflow_BBTune_GetPhase();
+
+		if (phase == BBTUNE_PROMPT) {
+			// Pre-start prompt
+			showHeader("BB AUTO-TUNE");
+			for(uint8_t n=0;n<128;n++){
+				LCD_SetPixel(n,7);
+				LCD_SetPixel(n,64-9);
+			}
+
+			len = snprintf(buf, sizeof(buf), "INSERT PCB FOR");
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 16, FONT6X6);
+			len = snprintf(buf, sizeof(buf), "BEST RESULTS");
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 24, FONT6X6);
+			len = snprintf(buf, sizeof(buf), "3 HEAT/COOL CYCLES");
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 36, FONT6X6);
+
+			int y = 64 - 7;
+			LCD_disp_str((uint8_t*)" START ", 7, 0, y, FONT6X6 | INVERT);
+			LCD_disp_str((uint8_t*)" BACK ", 6, 91, y, FONT6X6 | INVERT);
+
+			if (keyspressed & KEY_F1) {
+				Reflow_BBTune_Start();
+				retval = 0;
+			}
+			if (keyspressed & KEY_S) {
+				mode = MAIN_SETUP;
+				Reflow_SetMode(REFLOW_STANDBYFAN);
+				retval = 0;
+			}
+
+		} else if (phase == BBTUNE_DONE) {
+			// Show results
+			showHeader("BB TUNE DONE");
+			for(uint8_t n=0;n<128;n++){
+				LCD_SetPixel(n,7);
+				LCD_SetPixel(n,64-9);
+			}
+
+			len = snprintf(buf, sizeof(buf), "HEAT OFFSET: %dC", Reflow_BBTune_GetHeatOffset());
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 18, FONT6X6);
+			len = snprintf(buf, sizeof(buf), "COOL OFFSET: %dC", Reflow_BBTune_GetCoolOffset());
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 28, FONT6X6);
+			len = snprintf(buf, sizeof(buf), "SAVED TO MEMORY");
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 42, FONT6X6 | INVERT);
+
+			int y = 64 - 7;
+			LCD_disp_str((uint8_t*)" DONE ", 6, 91, y, FONT6X6 | INVERT);
+
+			if (keyspressed & KEY_ANY) {
+				Reflow_BBTune_Stop();
+				mode = MAIN_HOME;
+				retval = 0;
+			}
+
+		} else {
+			// Tuning in progress
+			uint8_t heat, fan;
+			Reflow_BBTune_Work(&heat, &fan);
+			Set_Heater(heat);
+			Set_Fan(fan);
+
+			showHeader("BB AUTO-TUNE");
+			for(uint8_t n=0;n<128;n++){
+				LCD_SetPixel(n,7);
+				LCD_SetPixel(n,64-9);
+			}
+
+			// Phase label
+			const char* phasestr = "";
+			switch (phase) {
+				case BBTUNE_HEATING:    phasestr = "HEATING"; break;
+				case BBTUNE_HEAT_COAST: phasestr = "MEASURING PEAK"; break;
+				case BBTUNE_COOLING:    phasestr = "COOLING"; break;
+				case BBTUNE_COOL_COAST: phasestr = "MEASURING LOW"; break;
+				default: break;
+			}
+
+			int cycle = Reflow_BBTune_GetCycle();
+			len = snprintf(buf, sizeof(buf), "CYCLE %d/%d", cycle + 1, BBTUNE_NUM_CYCLES);
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 12, FONT6X6);
+
+			len = snprintf(buf, sizeof(buf), "%s", phasestr);
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 22, (blinkOn==1?FONT6X6|INVERT:FONT6X6));
+
+			len = snprintf(buf, sizeof(buf), "TEMP: %3.1f`", Sensor_GetTemp(TC_AVERAGE));
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 34, FONT6X6);
+
+			len = snprintf(buf, sizeof(buf), "TARGET: %d-%dC", BBTUNE_TARGET_LOW, BBTUNE_TARGET_HIGH);
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 44, FONT6X6);
+
+			int y = 64 - 7;
+			LCD_disp_str((uint8_t*)" ABORT ", 7, 91, y, FONT6X6 | INVERT);
+
+			if (keyspressed & KEY_S) {
+				printf("\nBB Tune aborted by user\n");
+				Reflow_BBTune_Stop();
+				mode = MAIN_HOME;
+				retval = 0;
+			}
+		}
 
 
 	// Show screensaver

@@ -145,6 +145,14 @@ void Reflow_ValidateNV(void) {
 		NV_SetConfig(REFLOW_BANGBANG_MODE, 0); // Default OFF (PID control)
 	}
 
+	if (NV_GetConfig(REFLOW_BB_HEAT_OFFSET) == 255) {
+		NV_SetConfig(REFLOW_BB_HEAT_OFFSET, 0); // Default: no anticipatory offset
+	}
+
+	if (NV_GetConfig(REFLOW_BB_COOL_OFFSET) == 255) {
+		NV_SetConfig(REFLOW_BB_COOL_OFFSET, 0); // Default: no anticipatory offset
+	}
+
 	Reflow_SelectProfileIdx(NV_GetConfig(REFLOW_PROFILE));
 }
 

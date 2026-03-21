@@ -32,6 +32,8 @@ static setupMenuStruct setupmenu[] = {
 	{"Right TC offs. %+1.2f",	TC_RIGHT_OFFSET, 	 	 0, 254, -127, 0.10f,	"Right TC offs. -12.70","Right TC offs.  12.70"},
 	{"Preheat temp   %4.0fC",	REFLOW_PREHEAT_TEMP,	 0, 50, 30, 1.0f,		"Preheat temp       30","Preheat temp       80"},
 	{"Bang-bang heat  %4.0f",	REFLOW_BANGBANG_MODE,	 0, 1, 0, 1.0f,		"Bang-bang heat    OFF","Bang-bang heat     ON"},
+	{"BB heat offset %3.0fC",	REFLOW_BB_HEAT_OFFSET,	 0, 25, 0, 1.0f,	"BB heat offset     0C","BB heat offset    25C"},
+	{"BB cool offset %3.0fC",	REFLOW_BB_COOL_OFFSET,	 0, 25, 0, 1.0f,	"BB cool offset     0C","BB cool offset    25C"},
 	{"Screensaver mins %4.0f",	SCREENSAVER_ACTIVE, 	 0, 60, 0, 1.0f,		"Screensaver       OFF","Screensaver    1 HOUR"},
 };
 

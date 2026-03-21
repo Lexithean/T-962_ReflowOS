@@ -1,0 +1,1 @@
+const char* Version_GetGitVersion(void) { return "v1.0.0-2-ga7dbadc-dirty"; }
