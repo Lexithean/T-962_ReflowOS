@@ -176,6 +176,87 @@ typedef enum eMainMode {
 } MainMode_t;
 
 static char buf[25];
+
+// ============================================================================
+// Rolling temperature graph for tune screens
+// Graph area: X=9..118 (110 pixels), Y=10..52 (42 pixels)
+// ============================================================================
+#define TUNE_GRAPH_X0    (9)
+#define TUNE_GRAPH_W     (110)
+#define TUNE_GRAPH_Y0    (10)   // Top of graph (high temp)
+#define TUNE_GRAPH_Y1    (52)   // Bottom of graph (low temp)
+#define TUNE_GRAPH_H     (TUNE_GRAPH_Y1 - TUNE_GRAPH_Y0)
+#define TUNE_GRAPH_TMIN  (20.0f)   // Min temp on Y axis
+#define TUNE_GRAPH_TMAX  (260.0f)  // Max temp on Y axis
+
+static uint8_t tuneGraph[TUNE_GRAPH_W]; // Y pixel for each sample
+static int tuneGraphIdx = 0;
+static int tuneGraphCount = 0;
+
+static void TuneGraph_Reset(void) {
+	tuneGraphIdx = 0;
+	tuneGraphCount = 0;
+	for (int i = 0; i < TUNE_GRAPH_W; i++) tuneGraph[i] = 0;
+}
+
+static void TuneGraph_AddSample(float temp) {
+	// Map temperature to Y pixel (inverted: high temp = low Y)
+	float frac = (temp - TUNE_GRAPH_TMIN) / (TUNE_GRAPH_TMAX - TUNE_GRAPH_TMIN);
+	if (frac < 0.0f) frac = 0.0f;
+	if (frac > 1.0f) frac = 1.0f;
+	uint8_t y = TUNE_GRAPH_Y1 - (uint8_t)(frac * (float)TUNE_GRAPH_H);
+	tuneGraph[tuneGraphIdx] = y;
+	tuneGraphIdx = (tuneGraphIdx + 1) % TUNE_GRAPH_W;
+	if (tuneGraphCount < TUNE_GRAPH_W) tuneGraphCount++;
+}
+
+static void TuneGraph_Draw(float targetHigh, float targetLow) {
+	// Draw graph border (left and bottom lines)
+	for (int y = TUNE_GRAPH_Y0; y <= TUNE_GRAPH_Y1; y++) {
+		LCD_SetPixel(TUNE_GRAPH_X0 - 1, y);
+	}
+	for (int x = TUNE_GRAPH_X0 - 1; x <= TUNE_GRAPH_X0 + TUNE_GRAPH_W; x++) {
+		LCD_SetPixel(x, TUNE_GRAPH_Y1 + 1);
+	}
+
+	// Draw target line(s) as dashed
+	if (targetHigh > 0) {
+		float frac = (targetHigh - TUNE_GRAPH_TMIN) / (TUNE_GRAPH_TMAX - TUNE_GRAPH_TMIN);
+		if (frac >= 0.0f && frac <= 1.0f) {
+			uint8_t ty = TUNE_GRAPH_Y1 - (uint8_t)(frac * (float)TUNE_GRAPH_H);
+			for (int x = TUNE_GRAPH_X0; x < TUNE_GRAPH_X0 + TUNE_GRAPH_W; x += 3) {
+				LCD_SetPixel(x, ty);
+			}
+		}
+	}
+	if (targetLow > 0 && targetLow != targetHigh) {
+		float frac = (targetLow - TUNE_GRAPH_TMIN) / (TUNE_GRAPH_TMAX - TUNE_GRAPH_TMIN);
+		if (frac >= 0.0f && frac <= 1.0f) {
+			uint8_t ty = TUNE_GRAPH_Y1 - (uint8_t)(frac * (float)TUNE_GRAPH_H);
+			for (int x = TUNE_GRAPH_X0; x < TUNE_GRAPH_X0 + TUNE_GRAPH_W; x += 3) {
+				LCD_SetPixel(x, ty);
+			}
+		}
+	}
+
+	// Draw temperature trace (rolling, newest sample on the right)
+	for (int i = 0; i < tuneGraphCount; i++) {
+		int bufIdx;
+		int screenX;
+		if (tuneGraphCount < TUNE_GRAPH_W) {
+			// Buffer not full yet: draw from left
+			bufIdx = i;
+			screenX = TUNE_GRAPH_X0 + i;
+		} else {
+			// Buffer full: oldest is at tuneGraphIdx, draw rolling
+			bufIdx = (tuneGraphIdx + i) % TUNE_GRAPH_W;
+			screenX = TUNE_GRAPH_X0 + i;
+		}
+		if (tuneGraph[bufIdx] > 0) {
+			LCD_SetPixel(screenX, tuneGraph[bufIdx]);
+		}
+	}
+}
 static int len;
 static uint16_t animCnt=0;
 static int16_t animIX=0,animIY=0,animIZ=0;
@@ -885,6 +966,7 @@ static int32_t Main_Work(void) {
 			LCD_disp_str((uint8_t*)" BACK ", 6, 91, y, FONT6X6 | INVERT);
 
 			if (keyspressed & KEY_F1) {
+				TuneGraph_Reset();
 				Reflow_BBTune_Start();
 				retval = 0;
 			}
@@ -919,42 +1001,38 @@ static int32_t Main_Work(void) {
 			}
 
 		} else {
-			// Tuning in progress
+			// Tuning in progress — show live graph
 			uint8_t heat, fan;
 			Reflow_BBTune_Work(&heat, &fan);
 			Set_Heater(heat);
 			Set_Fan(fan);
 
-			showHeader("BB AUTO-TUNE");
-			for(uint8_t n=0;n<128;n++){
-				LCD_SetPixel(n,7);
-				LCD_SetPixel(n,64-9);
-			}
+			// Add temperature sample to rolling graph
+			TuneGraph_AddSample(Sensor_GetTemp(TC_AVERAGE));
 
-			// Phase label
+			// Header with cycle and phase
 			const char* phasestr = "";
 			switch (phase) {
-				case BBTUNE_HEATING:    phasestr = "HEATING"; break;
-				case BBTUNE_HEAT_COAST: phasestr = "MEASURING PEAK"; break;
-				case BBTUNE_COOLING:    phasestr = "COOLING"; break;
-				case BBTUNE_COOL_COAST: phasestr = "MEASURING LOW"; break;
+				case BBTUNE_HEATING:    phasestr = "HEAT"; break;
+				case BBTUNE_HEAT_COAST: phasestr = "PEAK"; break;
+				case BBTUNE_COOLING:    phasestr = "COOL"; break;
+				case BBTUNE_COOL_COAST: phasestr = "LOW"; break;
 				default: break;
 			}
-
 			int cycle = Reflow_BBTune_GetCycle();
-			len = snprintf(buf, sizeof(buf), "CYCLE %d/%d", cycle + 1, BBTUNE_NUM_CYCLES);
-			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 12, FONT6X6);
+			len = snprintf(buf, sizeof(buf), "%d/%d %s %.0f`",
+			               cycle + 1, BBTUNE_NUM_CYCLES, phasestr,
+			               Sensor_GetTemp(TC_AVERAGE));
+			showHeader(buf);
 
-			len = snprintf(buf, sizeof(buf), "%s", phasestr);
-			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 22, (blinkOn==1?FONT6X6|INVERT:FONT6X6));
+			// Draw graph with both target lines
+			TuneGraph_Draw((float)BBTUNE_TARGET_HIGH, (float)BBTUNE_TARGET_LOW);
 
-			len = snprintf(buf, sizeof(buf), "TEMP: %3.1f`", Sensor_GetTemp(TC_AVERAGE));
-			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 34, FONT6X6);
-
-			len = snprintf(buf, sizeof(buf), "TARGET: %d-%dC", BBTUNE_TARGET_LOW, BBTUNE_TARGET_HIGH);
-			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 44, FONT6X6);
-
+			// Bottom bar
+			for(uint8_t n=0;n<128;n++) LCD_SetPixel(n, 64-9);
 			int y = 64 - 7;
+			len = snprintf(buf, sizeof(buf), "%d-%dC", BBTUNE_TARGET_LOW, BBTUNE_TARGET_HIGH);
+			LCD_disp_str((uint8_t*)buf, len, 2, y, FONT6X6);
 			LCD_disp_str((uint8_t*)" ABORT ", 7, 91, y, FONT6X6 | INVERT);
 
 			if (keyspressed & KEY_S) {
@@ -1071,6 +1149,7 @@ static int32_t Main_Work(void) {
 			LCD_disp_str((uint8_t*)" BACK ", 6, 91, y, FONT6X6 | INVERT);
 
 			if (keyspressed & KEY_F1) {
+				TuneGraph_Reset();
 				Reflow_PIDTune_Start();
 				retval = 0;
 			}
@@ -1107,38 +1186,36 @@ static int32_t Main_Work(void) {
 			}
 
 		} else {
+			// Tuning in progress — show live graph
 			uint8_t heat, fan;
 			Reflow_PIDTune_Work(&heat, &fan);
 			Set_Heater(heat);
 			Set_Fan(fan);
 
-			showHeader("PID AUTO-TUNE");
-			for(uint8_t n=0;n<128;n++){
-				LCD_SetPixel(n,7);
-				LCD_SetPixel(n,64-9);
-			}
+			// Add temperature sample to rolling graph
+			TuneGraph_AddSample(Sensor_GetTemp(TC_AVERAGE));
 
+			// Header with cycle and phase
 			const char* phasestr = "";
 			switch (phase) {
-				case PIDTUNE_SETTLING:    phasestr = "HEATING TO TARGET"; break;
-				case PIDTUNE_OSCILLATING: phasestr = "OSCILLATING"; break;
+				case PIDTUNE_SETTLING:    phasestr = "SETTLE"; break;
+				case PIDTUNE_OSCILLATING: phasestr = "OSCIL"; break;
 				default: break;
 			}
-
 			int cycle = Reflow_PIDTune_GetCycle();
-			len = snprintf(buf, sizeof(buf), "CYCLE %d/%d", cycle + 1, PIDTUNE_NUM_CYCLES);
-			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 12, FONT6X6);
+			len = snprintf(buf, sizeof(buf), "%d/%d %s %.0f`",
+			               cycle + 1, PIDTUNE_NUM_CYCLES, phasestr,
+			               Sensor_GetTemp(TC_AVERAGE));
+			showHeader(buf);
 
-			len = snprintf(buf, sizeof(buf), "%s", phasestr);
-			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 22, (blinkOn==1?FONT6X6|INVERT:FONT6X6));
+			// Draw graph with single target line
+			TuneGraph_Draw((float)PIDTUNE_TARGET, 0);
 
-			len = snprintf(buf, sizeof(buf), "TEMP: %3.1f`", Sensor_GetTemp(TC_AVERAGE));
-			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 34, FONT6X6);
-
-			len = snprintf(buf, sizeof(buf), "TARGET: %dC", PIDTUNE_TARGET);
-			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 44, FONT6X6);
-
+			// Bottom bar
+			for(uint8_t n=0;n<128;n++) LCD_SetPixel(n, 64-9);
 			int y = 64 - 7;
+			len = snprintf(buf, sizeof(buf), "TGT %dC", PIDTUNE_TARGET);
+			LCD_disp_str((uint8_t*)buf, len, 2, y, FONT6X6);
 			LCD_disp_str((uint8_t*)" ABORT ", 7, 91, y, FONT6X6 | INVERT);
 
 			if (keyspressed & KEY_S) {
