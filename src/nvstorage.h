@@ -32,6 +32,9 @@ typedef enum eNVItem {
 	REFLOW_BUZZER_ALERTS,	// Audible alerts at stage transitions (0=off, 1=on)
 	REFLOW_MAX_COOL_RATE,	// Max cooling rate °C/10s (0=unlimited, 1-50)
 
+	TC_LEFT_OFFSET_HI,		// High-temp offset at 200°C (same encoding as TC_LEFT_OFFSET)
+	TC_RIGHT_OFFSET_HI,	// High-temp offset at 200°C (same encoding as TC_RIGHT_OFFSET)
+
 	NVITEM_NUM_ITEMS // Last value
 } NVItem_t;
 

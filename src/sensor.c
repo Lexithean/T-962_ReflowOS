@@ -25,8 +25,20 @@ static OperationMode_t opMode = AMBIENT;
 static uint8_t opModeTempThresh = 5;
 // Gain adjust, this may have to be calibrated per device if factory trimmer adjustments are off
 static float adcgainadj[2];
- // Offset adjust, this will definitely have to be calibrated per device
-static float adcoffsetadj[2];
+static float adcoffsetadj[2]; // Ambient (low-temp) offset
+static float adcoffsetadj_hi[2]; // High-temp offset at 200°C
+
+// Two-point interpolation: linearly blend between ambient offset and hi-temp offset
+// ambient ref = 25°C, hi ref = 200°C
+static float Sensor_InterpolateOffset(int ch, float rawtemp) {
+	if (adcoffsetadj_hi[ch] == adcoffsetadj[ch]) {
+		return adcoffsetadj[ch]; // Same offset, no interpolation needed
+	}
+	if (rawtemp <= 25.0f) return adcoffsetadj[ch];
+	if (rawtemp >= 200.0f) return adcoffsetadj_hi[ch];
+	float frac = (rawtemp - 25.0f) / 175.0f;
+	return adcoffsetadj[ch] + (adcoffsetadj_hi[ch] - adcoffsetadj[ch]) * frac;
+}
 
 static float temperature[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 static uint8_t tempvalid = 0;
@@ -93,6 +105,19 @@ void Sensor_ValidateNV(void) {
 	}
 	adcoffsetadj[1] = ((float)(temp - 127)) * 0.5f;
 
+	// High-temp offsets (default same as ambient = no two-point correction)
+	temp = NV_GetConfig(TC_LEFT_OFFSET_HI);
+	if (temp == 255) {
+		temp = NV_GetConfig(TC_LEFT_OFFSET); // Default: same as ambient
+	}
+	adcoffsetadj_hi[0] = ((float)(temp - 127)) * 0.5f;
+
+	temp = NV_GetConfig(TC_RIGHT_OFFSET_HI);
+	if (temp == 255) {
+		temp = NV_GetConfig(TC_RIGHT_OFFSET); // Default: same as ambient
+	}
+	adcoffsetadj_hi[1] = ((float)(temp - 127)) * 0.5f;
+
 	temp = NV_GetConfig(OP_MODE);
 	opMode = (OperationMode_t)temp;
 
@@ -137,9 +162,11 @@ void Sensor_DoConversion(void) {
 	// Assume no CJ sensor
 	cjsensorpresent = 0;
 	if (tcpresent[0] && tcpresent[1]) {
-		// Adjust values with calibration settings
-		float t0 = tctemp[0] * adcgainadj[0]  + adcoffsetadj[0];
-		float t1 = tctemp[1] * adcgainadj[1]  + adcoffsetadj[1];
+		// Adjust values with calibration settings (two-point interpolation)
+		float off0 = Sensor_InterpolateOffset(0, tctemp[0]);
+		float off1 = Sensor_InterpolateOffset(1, tctemp[1]);
+		float t0 = tctemp[0] * adcgainadj[0]  + off0;
+		float t1 = tctemp[1] * adcgainadj[1]  + off1;
 		avgtemp = (t0 + t1) / 2.0f;
 		temperature[0] = t0;
 		temperature[1] = t1;
@@ -147,9 +174,11 @@ void Sensor_DoConversion(void) {
 		coldjunction = (tccj[0] + tccj[1]) / 2.0f;
 		cjsensorpresent = 1;
 	} else if (tcpresent[2] && tcpresent[3]) {
-		// Adjust values with calibration settings
-		float t0 = tctemp[2] * adcgainadj[0]  + adcoffsetadj[0];
-		float t1 = tctemp[3] * adcgainadj[1]  + adcoffsetadj[1];
+		// Adjust values with calibration settings (two-point interpolation)
+		float off0 = Sensor_InterpolateOffset(0, tctemp[2]);
+		float off1 = Sensor_InterpolateOffset(1, tctemp[3]);
+		float t0 = tctemp[2] * adcgainadj[0]  + off0;
+		float t1 = tctemp[3] * adcgainadj[1]  + off1;
 		avgtemp = (t0 + t1) / 2.0f;
 		temperature[0] = t0;
 		temperature[1] = t1;
@@ -177,9 +206,9 @@ void Sensor_DoConversion(void) {
 		temperature[0] *= adcgainadj[0];
 		temperature[1] *= adcgainadj[1];
 
-		// Offset adjust
-		temperature[0] += coldjunction + adcoffsetadj[0];
-		temperature[1] += coldjunction + adcoffsetadj[1];
+		// Offset adjust (two-point interpolation)
+		temperature[0] += coldjunction + Sensor_InterpolateOffset(0, temperature[0]);
+		temperature[1] += coldjunction + Sensor_InterpolateOffset(1, temperature[1]);
 
 		tempvalid |= 0x03;
 
