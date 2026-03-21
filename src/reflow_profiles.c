@@ -153,6 +153,18 @@ void Reflow_ValidateNV(void) {
 		NV_SetConfig(REFLOW_BB_COOL_OFFSET, 0); // Default: no anticipatory offset
 	}
 
+	if (NV_GetConfig(SAFETY_RUNAWAY_THRESH) == 255) {
+		NV_SetConfig(SAFETY_RUNAWAY_THRESH, 30); // Default: 30°C above setpoint
+	}
+
+	if (NV_GetConfig(REFLOW_BUZZER_ALERTS) == 255) {
+		NV_SetConfig(REFLOW_BUZZER_ALERTS, 1); // Default: ON
+	}
+
+	if (NV_GetConfig(REFLOW_MAX_COOL_RATE) == 255) {
+		NV_SetConfig(REFLOW_MAX_COOL_RATE, 0); // Default: unlimited (no rate limiting)
+	}
+
 	Reflow_SelectProfileIdx(NV_GetConfig(REFLOW_PROFILE));
 }
 
