@@ -95,7 +95,7 @@
         .set  IRQ_STACK_SIZE, 0X00000080
         .set  SVC_STACK_SIZE, 0x00000080
 
-        .set  USR_STACK_SIZE, 0x00000400 // Shared with SYS mode
+        .set  USR_STACK_SIZE, 0x00000800 // Shared with SYS mode (2KB)
         
         .set TOTAL_STACK_SIZE, UND_STACK_SIZE + SVC_STACK_SIZE + \
                                 ABT_STACK_SIZE + FIQ_STACK_SIZE + \
