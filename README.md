@@ -52,11 +52,37 @@ This fork merges the following improvements from upstream pull requests that wer
 - **Text-based profile import** — `import profile N t1,t2,...` for easy profile upload without binary protocol (fork addition)
 - **Profile export** — `export profile N` outputs in import-compatible format for round-trip editing (fork addition)
 - **Profile naming** — `name profile N <name>` renames CUSTOM profile slots (fork addition)
+- **Dynamic Flash Profile Storage (v2.1.0)** — Support for up to 30 additional "Flash" profile slots using MCU internal memory (Sector 19, 8KB) (fork addition)
+- **Profile Backup & Restore (v2.1.0)** — Serial commands to dump/reload profiles to prevent data loss during firmware updates (fork addition)
 - **PlatformIO support** — Build with `pio run` in addition to `make` (#207)
 
 ### Build & CI
 - **GitHub Actions CI/CD** — Automatic firmware builds on push/PR, release artifact upload
 - **Node.js 24 compatible** — Updated action versions for long-term support
+
+---
+
+## Serial Commands
+
+The serial interface (57600 baud) allows full control and configuration.
+
+> [!WARNING]
+> **Reflashing erases all Flash Profiles.** Unlike EEPROM settings, profiles stored in the MCU's internal flash ARE wiped when you update the firmware. Always use the `backup` command before updating!
+
+| Command | Description |
+|---------|-------------|
+| `help` | Show all available commands |
+| `backup` | Dump all profiles (EEPROM + Flash) as restorable text |
+| `list flash` | List all profiles stored in flash memory |
+| `save flash <N> <T1,...>,<Name>` | Save profile to flash slot N (0-29) |
+| `delete flash <N>` | Delete flash profile N |
+| `export profile <ID>` | Export any profile (1-30+) in import format |
+| `import profile <1|2> <Data>` | Import into CUSTOM#1 or CUSTOM#2 EEPROM |
+| `name profile <1|2> <Name>` | Rename CUSTOM#1 or CUSTOM#2 EEPROM |
+| `bake <Temp> [Time]` | Enter bake mode at <Temp> C for [Time] s |
+| `json` | Toggle JSON telemetry output |
+| `pidtune` / `bbtune` | Start automated heater tuning |
+| `tccal` | Start automated thermocouple calibration |
 
 ---
 
