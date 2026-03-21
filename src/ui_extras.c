@@ -274,6 +274,13 @@ void displayReflowScreen(uint32_t keyspressed, uint8_t modeChange,uint8_t isDone
 			len = snprintf(buf, sizeof(buf), "%02u:%02u", (unsigned int)(ticks/60),(unsigned int)(ticks%60));
 
 			LCD_disp_str((uint8_t*)buf, len, 98, 7, (Reflow_IsPaused() && blinkOn==1)?FONT6X6|INVERT:FONT6X6);
+
+			// Time remaining
+			if (totalReflowTicks > 0 && (int)ticks < totalReflowTicks) {
+				int remain = totalReflowTicks - (int)ticks;
+				len = snprintf(buf, sizeof(buf), "-%u:%02u", (unsigned int)(remain/60),(unsigned int)(remain%60));
+				LCD_disp_str((uint8_t*)buf, len, 98, 14, FONT6X6);
+			}
 		}
 	}else if(reflowDisplay==1){
 		LCD_FB_Clear();

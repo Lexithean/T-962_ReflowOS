@@ -48,6 +48,12 @@ int32_t Reflow_Run(uint32_t thetime, float meastemp, uint8_t* pheat, uint8_t* pf
 void Reflow_ToggleStandbyLogging(void);
 void Reflow_PlotDots(void);
 
+// Safety & timing
+uint8_t Reflow_ThermalRunaway(void);   // Returns 1 if runaway detected
+void Reflow_ClearRunaway(void);
+int Reflow_GetProfileDuration(void);   // Total profile time in seconds
+int Reflow_GetElapsedTime(void);       // Elapsed profile time in seconds
+
 // Bang-bang auto-tune
 void Reflow_BBTune_Start(void);
 void Reflow_BBTune_Stop(void);

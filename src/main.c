@@ -663,29 +663,92 @@ static int32_t Main_Work(void) {
 
 	// Reflow active!
 	} else if (mode == MAIN_REFLOW) {
+		static uint16_t prev_setpoint = 0;
+		static uint8_t alerted_rising = 0;
+		static uint8_t alerted_peak = 0;
+		static uint8_t alerted_cooling = 0;
 
-		if(Reflow_IsDone()){
-			if(animIX==0){
-				Buzzer_Beep(BUZZ_1KHZ, 255, TICKS_MS(100) * NV_GetConfig(REFLOW_BEEP_DONE_LEN));
-				printf("\nReflow %s\n", "completed");
-				animIX=1;
+		// Check for thermal runaway
+		if (Reflow_ThermalRunaway()) {
+			LCD_FB_Clear();
+			showHeader("!! RUNAWAY !!");
+			for(uint8_t n=0;n<128;n++){
+				LCD_SetPixel(n,7);
+				LCD_SetPixel(n,64-9);
+			}
+			len = snprintf(buf, sizeof(buf), "THERMAL RUNAWAY");
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 14, FONT6X6 | INVERT);
+			len = snprintf(buf, sizeof(buf), "TEMP EXCEEDED LIMIT");
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 24, FONT6X6);
+			len = snprintf(buf, sizeof(buf), "HEATER OFF - FAN ON");
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 34, FONT6X6);
+			len = snprintf(buf, sizeof(buf), "TEMP: %.0f`", Sensor_GetTemp(TC_AVERAGE));
+			LCD_disp_str((uint8_t*)buf, len, LCD_ALIGN_CENTER(len), 44, FONT6X6);
+
+			int y = 64 - 7;
+			LCD_disp_str((uint8_t*)" DISMISS ", 9, 91 - 18, y, FONT6X6 | INVERT);
+
+			if (animIX == 0) {
+				Buzzer_Beep(BUZZ_2KHZ, 255, TICKS_MS(2000));
+				animIX = 2; // Use 2 to distinguish from normal done
+			}
+
+			retval = TICKS_MS(250);
+
+			if (keyspressed & KEY_ANY) {
+				Reflow_ClearRunaway();
+				mode = MAIN_HOME;
+				retval = 0;
+			}
+
+		} else {
+			if(Reflow_IsDone()){
+				if(animIX==0){
+					Buzzer_Beep(BUZZ_1KHZ, 255, TICKS_MS(100) * NV_GetConfig(REFLOW_BEEP_DONE_LEN));
+					printf("\nReflow %s\n", "completed");
+					animIX=1;
+					Reflow_SetMode(REFLOW_STANDBY);
+				}
+			}
+
+			// Stage transition buzzer alerts
+			if (NV_GetConfig(REFLOW_BUZZER_ALERTS) && !Reflow_IsDone()) {
+				uint16_t sp = Reflow_GetSetpoint();
+				// Rising: temp passing through profile setpoint upward
+				if (sp > prev_setpoint + 5 && !alerted_rising && sp > 100) {
+					// Temperature is ramping up past 100°C - soak/ramp alert
+					Buzzer_Beep(BUZZ_1KHZ, 200, TICKS_MS(100));
+					alerted_rising = 1;
+				}
+				// Peak: setpoint starts dropping (reflow peak reached)
+				if (prev_setpoint > 0 && sp < prev_setpoint - 3 && !alerted_peak && prev_setpoint > 150) {
+					Buzzer_Beep(BUZZ_2KHZ, 255, TICKS_MS(200));
+					alerted_peak = 1;
+				}
+				// Cooling: temp dropping below 100°C
+				if (alerted_peak && sp < 100 && !alerted_cooling) {
+					Buzzer_Beep(BUZZ_1KHZ, 200, TICKS_MS(150));
+					alerted_cooling = 1;
+				}
+				prev_setpoint = sp;
+			}
+
+			displayReflowScreen(keyspressed,modeChange,animIX);
+			retval = TICKS_MS(100);
+
+			// Abort reflow
+			if (keyspressed & KEY_S) {
+				if(animIX==0){
+					printf("\nReflow %s\n", "interrupted by keypress");
+				}
+				Reflow_ClearRunaway();
+				prev_setpoint = 0;
+				alerted_rising = alerted_peak = alerted_cooling = 0;
+				mode = MAIN_HOME;
 				Reflow_SetMode(REFLOW_STANDBY);
+				retval = 0; // Force immediate refresh
 			}
 		}
-
-		displayReflowScreen(keyspressed,modeChange,animIX);
-		retval = TICKS_MS(100);
-
-		// Abort reflow
-		if (keyspressed & KEY_S) {
-			if(animIX==0){
-				printf("\nReflow %s\n", "interrupted by keypress");
-			}
-			mode = MAIN_HOME;
-			Reflow_SetMode(REFLOW_STANDBY);
-			retval = 0; // Force immediate refresh
-		}
-
 
 
 

@@ -55,6 +55,10 @@ static int standby_logging = 0;
 uint8_t plotDot[TOTAL_DOTS];
 static int reflowPaused=0;
 
+// Safety: thermal runaway
+static uint8_t runaway_detected = 0;
+static float prev_avgtemp = 0;
+
 static int32_t Reflow_Work(void) {
 	static ReflowMode_t oldmode = REFLOW_INITIAL;
 	static uint32_t lasttick = 0;
@@ -100,6 +104,34 @@ static int32_t Reflow_Work(void) {
 	}
 	Set_Heater(heat);
 	Set_Fan(fan);
+
+	// Thermal runaway detection: abort if temp exceeds setpoint + threshold
+	if ((mymode == REFLOW_REFLOW || mymode == REFLOW_BAKE) && intsetpoint > 0) {
+		uint8_t thresh = NV_GetConfig(SAFETY_RUNAWAY_THRESH);
+		if (thresh > 0 && thresh < 255 && avgtemp > (float)(intsetpoint + thresh)) {
+			printf("\n*** THERMAL RUNAWAY: %.1fC > %d+%dC setpoint! ***",
+			       avgtemp, intsetpoint, thresh);
+			runaway_detected = 1;
+			reflowdone = 1;
+			Reflow_SetMode(REFLOW_STANDBY);
+		}
+	}
+
+	// Cooling rate control: limit fan when cooling too fast
+	if ((mymode == REFLOW_REFLOW || mymode == REFLOW_BAKE) && fan > 0) {
+		uint8_t maxrate_nv = NV_GetConfig(REFLOW_MAX_COOL_RATE);
+		if (maxrate_nv > 0 && maxrate_nv < 255) {
+			// maxrate_nv * 0.1 = max degrees per second
+			// Compare temp drop over last PID cycle (250ms)
+			float drop_per_sec = (prev_avgtemp - avgtemp) * (float)TICKS_PER_SECOND;
+			float max_rate = (float)maxrate_nv * 0.1f;
+			if (drop_per_sec > max_rate && prev_avgtemp > 0) {
+				// Cooling too fast: reduce fan to minimum
+				Set_Fan(NV_GetConfig(REFLOW_MIN_FAN_SPEED));
+			}
+		}
+	}
+	prev_avgtemp = avgtemp;
 
 	if (mymode != oldmode) {
 		printf("\n# Time,  Temp0, Temp1, Temp2, Temp3,  Set,Actual, Heat, Fan,  ColdJ, Mode");
@@ -263,6 +295,27 @@ int Reflow_GetTimeLeft(void) {
 		return -1;
 	}
 	return (bake_timer - numticks) / TICKS_PER_SECOND;
+}
+
+// Safety: thermal runaway
+uint8_t Reflow_ThermalRunaway(void) { return runaway_detected; }
+void Reflow_ClearRunaway(void) { runaway_detected = 0; }
+
+// Profile timing
+int Reflow_GetProfileDuration(void) {
+	// Find last non-zero profile entry, multiply index by 10 for seconds
+	int last = 0;
+	for (int i = NUMPROFILETEMPS - 1; i >= 0; i--) {
+		if (Reflow_GetSetpointAtIdx(i) > 0) {
+			last = i;
+			break;
+		}
+	}
+	return last * 10;
+}
+
+int Reflow_GetElapsedTime(void) {
+	return (int)(numticks / TICKS_PER_SECOND);
 }
 
 // returns -1 if the reflow process is done.
