@@ -52,7 +52,7 @@ This fork merges the following improvements from upstream pull requests that wer
 - **Text-based profile import** — `import profile N t1,t2,...` for easy profile upload without binary protocol (fork addition)
 - **Profile export** — `export profile N` outputs in import-compatible format for round-trip editing (fork addition)
 - **Profile naming** — `name profile N <name>` renames CUSTOM profile slots (fork addition)
-- **Dynamic Flash Profile Storage (v2.1.0)** — Support for up to 30 additional "Flash" profile slots using MCU internal memory (fork addition)
+- **Dynamic Flash Profile Storage (v2.1.0)** — Support for up to 30 additional "Flash" profile slots using MCU internal memory (Sector 19, 8KB) (fork addition)
 - **Profile Backup & Restore (v2.1.0)** — Serial commands to dump/reload profiles to prevent data loss during firmware updates (fork addition)
 - **PlatformIO support** — Build with `pio run` in addition to `make` (#207)
 

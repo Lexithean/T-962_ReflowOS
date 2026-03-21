@@ -1,7 +1,7 @@
 /*
  * flashprofiles.c - IAP flash profile storage for T-962
  *
- * Stores additional reflow profiles in flash sector 10 (0x18000-0x1FFFF).
+ * Stores additional reflow profiles in flash sector 19 (0x1E000-0x1FFFF).
  * Profiles persist across power cycles but are ERASED on firmware update.
  * Use the 'backup' serial command to dump all profiles before updating.
  *

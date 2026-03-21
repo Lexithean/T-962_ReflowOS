@@ -3,10 +3,10 @@
 
 #include <stdint.h>
 
-// Profile storage in flash sector 10 (0x18000-0x1FFFF, 32KB)
+// Profile storage in flash sector 19 (0x1E000-0x1FFFF, 8KB)
 // Each profile occupies one 256-byte block (IAP minimum write size)
-#define FLASH_PROFILE_SECTOR     10
-#define FLASH_PROFILE_BASE       0x18000
+#define FLASH_PROFILE_SECTOR     19
+#define FLASH_PROFILE_BASE       0x1E000
 #define FLASH_PROFILE_END        0x20000
 #define FLASH_PROFILE_BLOCK_SIZE 256
 #define FLASH_PROFILE_MAX_SLOTS  30      // Reasonable cap (could fit 128)
