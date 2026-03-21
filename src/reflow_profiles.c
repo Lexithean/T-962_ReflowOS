@@ -167,6 +167,10 @@ void Reflow_ValidateNV(void) {
 		NV_SetConfig(REFLOW_MAX_COOL_RATE, 0); // Default: unlimited (no rate limiting)
 	}
 
+	if (NV_GetConfig(REFLOW_FAN_KICKSTART) == 255) {
+		NV_SetConfig(REFLOW_FAN_KICKSTART, 0); // Default: OFF
+	}
+
 	Reflow_SelectProfileIdx(NV_GetConfig(REFLOW_PROFILE));
 }
 
