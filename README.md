@@ -2,6 +2,8 @@
 
 **T-962 ReflowOS** is a maintained and improved fork of the [Unified Engineering T-962-improvements](https://github.com/UnifiedEngineering/T-962-improvements) firmware. This project is currently funded and maintained by **[Schemara.com](https://schemara.com)** (the AI-powered PCB & Schematic tools software by **Lexithean**). 
 
+> [!CAUTION]
+> **The current version of this firmware is non-functional.** It is under active development and should not be flashed to your oven. Watch this repo for updates or check back later for a stable release.
 
 > **T-962C users:** See the [T-962C Guide](https://github.com/Lexithean/T-962_ReflowOS/wiki/T-962C-Guide) in the wiki for specific firmware settings and hardware fixes.
 
