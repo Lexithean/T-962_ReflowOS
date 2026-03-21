@@ -44,6 +44,7 @@
 #include "systemfan.h"
 #include "setup.h"
 #include "ui_extras.h"
+#include "flashprofiles.h"
 
 extern uint8_t logobmp[];
 extern uint8_t stopbmp[];
@@ -159,6 +160,7 @@ int main(void) {
 	OneWire_Init();
 	SPI_TC_Init();
 	Reflow_Init();
+	FlashProfiles_Init();
 	SystemFan_Init();
 	printf("\nCurrent Operational Mode: "); Sensor_printOpMode(); printf("\n");
 	printf("Current Operational Mode Threshold: %u C\n", Sensor_getOpModeThreshold());
@@ -542,6 +544,70 @@ static int32_t Main_Work(void) {
 				} else {
 					printf("\nUsage: name profile 1 MyProfile (or 2)\n");
 				}
+
+			} else if (strncmp(serial_cmd, "save flash ", 11) == 0) {
+				// save flash N t1,t2,...,Name
+				int fslot = serial_cmd[11] - '0';
+				if (serial_cmd[12] >= '0' && serial_cmd[12] <= '9') {
+					fslot = fslot * 10 + (serial_cmd[12] - '0');
+				}
+				if (fslot >= 0 && fslot < FLASH_PROFILE_MAX_SLOTS) {
+					// Find the temperature data start
+					char* tempStart = strchr(&serial_cmd[11], ' ');
+					if (tempStart) {
+						tempStart++;
+						uint16_t ftemps[48] = {0};
+						char fname[FLASH_PROFILE_NAME_LEN] = {0};
+						int tidx = 0;
+						char* tok = tempStart;
+						while (tidx < 48 && *tok != '\0') {
+							if (*tok >= '0' && *tok <= '9') {
+								int val = 0;
+								while (*tok >= '0' && *tok <= '9') {
+									val = val * 10 + (*tok - '0');
+									tok++;
+								}
+								ftemps[tidx++] = (uint16_t)val;
+								if (*tok == ',') tok++;
+							} else {
+								// Rest is the name
+								strncpy(fname, tok, FLASH_PROFILE_NAME_LEN - 1);
+								break;
+							}
+						}
+						// If last CSV field is text (after all temps), use as name
+						if (fname[0] == '\0') {
+							snprintf(fname, FLASH_PROFILE_NAME_LEN, "Flash #%d", fslot);
+						}
+						if (FlashProfiles_WriteProfile(fslot, ftemps, fname) == 0) {
+							printf("\nSaved %d points to flash slot %d (%s)\n", tidx, fslot, fname);
+						} else {
+							printf("\n[ERROR] Flash write failed\n");
+						}
+					} else {
+						printf("\nUsage: save flash N t1,t2,...,Name\n");
+					}
+				} else {
+					printf("\nSlot must be 0-%d\n", FLASH_PROFILE_MAX_SLOTS - 1);
+				}
+
+			} else if (sscanf(serial_cmd, "delete flash %d", &param) > 0) {
+				if (FlashProfiles_Delete(param) == 0) {
+					printf("\nDeleted flash profile %d\n", param);
+				} else {
+					printf("\n[ERROR] Delete failed\n");
+				}
+
+			} else if (strcmp(serial_cmd, "list flash") == 0) {
+				printf("\nFlash profiles: %d/%d slots\n", FlashProfiles_GetCount(), FlashProfiles_GetCapacity());
+				for (int fi = 0; fi < FLASH_PROFILE_MAX_SLOTS; fi++) {
+					if (FlashProfiles_IsValid(fi)) {
+						printf("  [%2d] %s\n", fi, FlashProfiles_GetName(fi));
+					}
+				}
+
+			} else if (strcmp(serial_cmd, "backup") == 0) {
+				FlashProfiles_BackupAll();
 
 			} else {
 				printf("\nCannot understand command, ? for help\n");

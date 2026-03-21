@@ -13,7 +13,9 @@ GROUP(
 
 MEMORY {
   /* Define each memory region */
-  MFlash128 (rx) : ORIGIN = 0x0, LENGTH = 0x20000 /* 128K bytes */
+  /* Firmware gets sectors 0-9 (96KB). Sector 10 (32KB) reserved for IAP profile storage. */
+  MFlash128 (rx) : ORIGIN = 0x0, LENGTH = 0x18000 /* 96K bytes (sectors 0-9) */
+  FlashProfiles (rx) : ORIGIN = 0x18000, LENGTH = 0x8000 /* 32K bytes (sector 10) */
   Ram16 (rwx) : ORIGIN = 0x40000000, LENGTH = 0x4000 /* 16K bytes */
 }
   /* Define a symbol for the top of each memory region */
