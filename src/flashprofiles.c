@@ -1,7 +1,7 @@
 /*
  * flashprofiles.c - IAP flash profile storage for T-962 reflow controller
  *
- * Stores reflow profiles in LPC2134 flash sector 7 (8KB at 0xE000).
+ * Stores reflow profiles in LPC2134 flash sector 10 (at 0x18000).
  * Each profile occupies a 256-byte block. Supports up to 32 profiles.
  *
  * Uses NXP IAP (In-Application Programming) ROM routines for erase/write.
@@ -200,9 +200,8 @@ void FlashProfiles_Init(void) {
 			profile_valid[i] = 0;
 		}
 	}
-	printf("\nFlash profiles: %d/%d slots used (sector %d @ 0x%X)",
-		profile_count, FLASH_PROFILE_MAX_SLOTS,
-		FLASH_PROFILE_SECTOR, FLASH_PROFILE_BASE);
+	printf("\nFlash profiles: %d/%d slots used",
+		profile_count, FLASH_PROFILE_MAX_SLOTS);
 }
 
 int FlashProfiles_GetCount(void) { return profile_count; }
