@@ -10,8 +10,8 @@
 #include "reflow_profiles.h"
 #include "flashprofiles.h"
 
-#define RAMPTEST
-#define PIDTEST
+#define GC10_PROFILE
+#define GC50_PROFILE
 
 extern uint8_t graphbmp[];
 
@@ -58,24 +58,40 @@ static const profile syntechlfprofile = {
 	}
 };
 
-#ifdef RAMPTEST
-// Ramp speed test temp profile
-static const profile rampspeed_testprofile = {
-	"RAMP SPEED TEST", {
-		 50, 50, 50, 50,245,245,245,245,245,245,245,245,245,245,245,245, // 0-150s
-		245,245,245,245,245,245,245,245,245, 50, 50, 50, 50, 50, 50, 50, // 160-310s
-		 50, 50, 50, 50, 50, 50, 50, 50,  0,  0,  0,  0,  0,  0,  0,  0  // 320-470s
+#ifdef GC10_PROFILE
+// LOCTITE GC 10 — SAC305 no-clean solder paste
+// Enhanced soak window 150-200°C, peak 245°C, 217°C liquidus
+// Profile derived from GC10 TDS recommended reflow parameters
+static const profile gc10profile = {
+	"LOCTITE GC 10", {
+		// Ramp to soak (~2°C/s)
+		 50,  70,  90, 110, 130, 145, 150, 153, 156, 159, 162, 165,
+		// Extended soak zone 150-200°C (enhanced process window)
+		168, 171, 174, 177, 180, 183, 186, 190, 194, 198,
+		// Ramp to peak
+		205, 215, 230, 240, 245,
+		// Peak + cool down
+		240, 225, 205, 185, 165, 145, 130, 115, 100,
+		 85,  70,  55,   0,   0,   0,   0,   0,   0,   0,   0,   0
 	}
 };
 #endif
 
-#ifdef PIDTEST
-// PID gain adjustment test profile (5% setpoint change)
-static const profile pidcontrol_testprofile = {
-	"PID CONTROL TEST",	{
-		171,171,171,171,171,171,171,171,171,171,171,171,171,171,171,171, // 0-150s
-		180,180,180,180,180,180,180,180,171,171,171,171,171,171,171,171, // 160-310s
-		  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0  // 320-470s
+#ifdef GC50_PROFILE
+// LOCTITE GC 50 — SAC305 jetting solder paste
+// Standard convection reflow, peak 245°C, 217°C liquidus
+// Profile derived from GC50 TDS recommended reflow parameters
+static const profile gc50profile = {
+	"LOCTITE GC 50", {
+		// Ramp to soak (~2°C/s)
+		 50,  70,  90, 110, 125, 140, 150, 155, 160, 165, 170, 175,
+		// Soak zone 150-200°C
+		178, 180, 183, 185, 188, 190, 193, 195, 198, 200,
+		// Ramp to peak (~1.5°C/s)
+		210, 225, 240, 245, 245,
+		// Peak hold + cool down (<6°C/s)
+		235, 220, 200, 180, 160, 140, 125, 110,  95,
+		 80,  65,  50,   0,   0,   0,   0,   0,   0,   0,   0,   0
 	}
 };
 #endif
@@ -93,11 +109,11 @@ static const profile* profiles[] = {
 	&syntechlfprofile,
 	&nc31profile,
 	&am4300profile,
-#ifdef RAMPTEST
-	&rampspeed_testprofile,
+#ifdef GC10_PROFILE
+	&gc10profile,
 #endif
-#ifdef PIDTEST
-	&pidcontrol_testprofile,
+#ifdef GC50_PROFILE
+	&gc50profile,
 #endif
 	(profile*) &ee1,
 	(profile*) &ee2
