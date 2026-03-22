@@ -48,9 +48,14 @@ static setupMenuStruct setupmenu[] = {
 };
 
 #define NUM_SETUP_ITEMS (sizeof(setupmenu) / sizeof(setupmenu[0]))
+#define FACTORY_RESET_IDX NUM_SETUP_ITEMS  // Virtual item after all real items
 
 int Setup_getNumItems(void) {
-	return NUM_SETUP_ITEMS;
+	return NUM_SETUP_ITEMS + 1; // +1 for factory reset
+}
+
+int Setup_isFactoryResetItem(int item) {
+	return item == FACTORY_RESET_IDX;
 }
 
 int _getRawValue(int item) {
@@ -75,6 +80,7 @@ void Setup_setRealValue(int item, float value) {
 }
 
 void Setup_increaseValue(int item, int amount) {
+	if (item >= (int)NUM_SETUP_ITEMS) return; // Factory reset item — no value
 	int curval = _getRawValue(item) + amount;
 	int maxval = setupmenu[item].maxval;
 	if(curval > maxval)
@@ -83,6 +89,7 @@ void Setup_increaseValue(int item, int amount) {
 }
 
 void Setup_decreaseValue(int item, int amount) {
+	if (item >= (int)NUM_SETUP_ITEMS) return; // Factory reset item — no value
 	int curval = _getRawValue(item) - amount;
 	int minval = setupmenu[item].minval;
 	if(curval < minval)
@@ -95,6 +102,9 @@ void Setup_printFormattedValue(int item) {
 }
 
 int Setup_snprintFormattedValue(char* buf, int n, int item) {
+	if (item >= (int)NUM_SETUP_ITEMS) {
+		return snprintf(buf, n, ">> FACTORY RESET <<");
+	}
 	int curval = _getRawValue(item);
 	int minval = setupmenu[item].minval;
 	int maxval = setupmenu[item].maxval;

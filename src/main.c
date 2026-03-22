@@ -735,8 +735,24 @@ static int32_t Main_Work(void) {
 
 		// Leave setup
 		if (keyspressed & KEY_S) {
+			if (Setup_isFactoryResetItem(selected)) {
+				// Factory reset from UI
+				NV_FactoryReset();
+				Reflow_ValidateNV();
+				Reflow_LoadCustomProfiles();
+				LCD_FB_Clear();
+				len = snprintf(buf, sizeof(buf), "FACTORY RESET OK");
+				LCD_disp_str((uint8_t*)buf, len, 13, 28, FONT6X6);
+				LCD_FB_Update();
+				Buzzer_Beep(BUZZ_1KHZ, 255, TICKS_MS(100));
+				// Brief pause so user sees the message
+				int wait = 20; // ~2 seconds at 100ms ticks
+				while (wait-- > 0) { retval = TICKS_MS(100); }
+				mode = MAIN_HOME;
+				Reflow_SetMode(REFLOW_STANDBY);
+				retval = 0;
 			// If on bang-bang rows and bang-bang is ON, go to BB Tune
-			if (NV_GetConfig(REFLOW_BANGBANG_MODE) && selected >= 7 && selected <= 9) {
+			} else if (NV_GetConfig(REFLOW_BANGBANG_MODE) && selected >= 7 && selected <= 9) {
 				mode = MAIN_BBTUNE;
 				Reflow_SetMode(REFLOW_STANDBY);
 				retval = 0;
