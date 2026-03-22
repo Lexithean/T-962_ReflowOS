@@ -58,6 +58,7 @@ static int iap_erase_sector(void) {
 	iap_entry(command, result);
 	if (result[0] != 0) {
 		VIC_RestoreIRQ(save);
+		printf("\n[IAP] Prepare for erase failed: code %u\n", result[0]);
 		return -1;
 	}
 
@@ -69,6 +70,9 @@ static int iap_erase_sector(void) {
 	iap_entry(command, result);
 
 	VIC_RestoreIRQ(save);
+	if (result[0] != 0) {
+		printf("\n[IAP] Erase failed: code %u\n", result[0]);
+	}
 	return (result[0] == 0) ? 0 : -1;
 }
 
@@ -83,6 +87,7 @@ static int iap_write_block(uint32_t flash_addr, uint8_t* data) {
 	iap_entry(command, result);
 	if (result[0] != 0) {
 		VIC_RestoreIRQ(save);
+		printf("\n[IAP] Prepare for write failed: code %u\n", result[0]);
 		return -1;
 	}
 
@@ -95,6 +100,9 @@ static int iap_write_block(uint32_t flash_addr, uint8_t* data) {
 	iap_entry(command, result);
 
 	VIC_RestoreIRQ(save);
+	if (result[0] != 0) {
+		printf("\n[IAP] Write to 0x%lX failed: code %u\n", (unsigned long)flash_addr, result[0]);
+	}
 	return (result[0] == 0) ? 0 : -1;
 }
 
@@ -180,7 +188,9 @@ void FlashProfiles_Init(void) {
 			profile_valid[i] = 0;
 		}
 	}
-	printf("\nFlash profiles: %d/%d slots used", profile_count, FLASH_PROFILE_MAX_SLOTS);
+	printf("\nFlash profiles: %d/%d slots used (sector %d @ 0x%X)",
+		profile_count, FLASH_PROFILE_MAX_SLOTS,
+		FLASH_PROFILE_SECTOR, FLASH_PROFILE_BASE);
 }
 
 int FlashProfiles_GetCount(void) { return profile_count; }
