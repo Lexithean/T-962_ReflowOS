@@ -55,7 +55,14 @@ int32_t I2C_Xfer(uint8_t slaveaddr, uint8_t* theBuffer, uint32_t theLength, uint
 	//printf("\n[STA]");
 
 	while (!done) {
-		while (!(I20CONSET & (1 << 3))); // SI
+		uint32_t timeout = 500000; // ~50ms at 55MHz
+		while (!(I20CONSET & (1 << 3))) { // Wait for SI
+			if (--timeout == 0) {
+				I20CONSET = (1 << 4); // Force STOP condition
+				while (I20CONSET & (1 << 4)); // Wait for STO to clear
+				return -1; // I2C bus timeout
+			}
+		}
 		stat = I20STAT;
 		//printf("[0x%02x]", stat);
 		switch(stat) {
