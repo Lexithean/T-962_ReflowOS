@@ -48,71 +48,74 @@ static const FlashProfileBlock_t* flash_profile_ptr(int slot) {
 		(uint32_t)slot * FLASH_PROFILE_BLOCK_SIZE);
 }
 
+// IAP command/result arrays — placed in BSS (not stack) to avoid
+// corruption from IAP's 128-byte internal stack usage
+static unsigned int iap_command[5];
+static unsigned int iap_result[3];
+
 static int iap_erase_sector(void) {
-	unsigned int command[5], result[3];
 	uint32_t save = VIC_DisableIRQ();
 	uint32_t mam_save = MAMCR;
 	MAMCR = 0; // Disable MAM during IAP (required by NXP)
 
 	// Prepare sector (must stay valid until erase)
-	command[0] = IAP_PREPARE_SECTORS;
-	command[1] = FLASH_PROFILE_SECTOR;
-	command[2] = FLASH_PROFILE_SECTOR;
-	iap_entry(command, result);
-	if (result[0] != 0) {
+	iap_command[0] = IAP_PREPARE_SECTORS;
+	iap_command[1] = FLASH_PROFILE_SECTOR;
+	iap_command[2] = FLASH_PROFILE_SECTOR;
+	iap_entry(iap_command, iap_result);
+	if (iap_result[0] != 0) {
 		MAMCR = mam_save;
 		VIC_RestoreIRQ(save);
-		printf("\n[IAP] Prepare for erase failed: code %u\n", result[0]);
+		printf("\n[IAP] Prepare for erase failed: code %u\n", iap_result[0]);
 		return -1;
 	}
 
 	// Erase sector
-	command[0] = IAP_ERASE_SECTORS;
-	command[1] = FLASH_PROFILE_SECTOR;
-	command[2] = FLASH_PROFILE_SECTOR;
-	command[3] = IAP_CCLK_KHZ;
-	iap_entry(command, result);
+	iap_command[0] = IAP_ERASE_SECTORS;
+	iap_command[1] = FLASH_PROFILE_SECTOR;
+	iap_command[2] = FLASH_PROFILE_SECTOR;
+	iap_command[3] = IAP_CCLK_KHZ;
+	iap_entry(iap_command, iap_result);
 
 	MAMCR = mam_save;
 	VIC_RestoreIRQ(save);
-	if (result[0] != 0) {
-		printf("\n[IAP] Erase failed: code %u\n", result[0]);
+	if (iap_result[0] != 0) {
+		printf("\n[IAP] Erase failed: code %u\n", iap_result[0]);
 	}
-	return (result[0] == 0) ? 0 : -1;
+	return (iap_result[0] == 0) ? 0 : -1;
 }
 
 static int iap_write_block(uint32_t flash_addr, uint8_t* data) {
-	unsigned int command[5], result[3];
 	uint32_t save = VIC_DisableIRQ();
 	uint32_t mam_save = MAMCR;
 	MAMCR = 0; // Disable MAM during IAP (required by NXP)
 
 	// Prepare sector (must stay valid until copy)
-	command[0] = IAP_PREPARE_SECTORS;
-	command[1] = FLASH_PROFILE_SECTOR;
-	command[2] = FLASH_PROFILE_SECTOR;
-	iap_entry(command, result);
-	if (result[0] != 0) {
+	iap_command[0] = IAP_PREPARE_SECTORS;
+	iap_command[1] = FLASH_PROFILE_SECTOR;
+	iap_command[2] = FLASH_PROFILE_SECTOR;
+	iap_entry(iap_command, iap_result);
+	if (iap_result[0] != 0) {
 		MAMCR = mam_save;
 		VIC_RestoreIRQ(save);
-		printf("\n[IAP] Prepare for write failed: code %u\n", result[0]);
+		printf("\n[IAP] Prepare for write failed: code %u\n", iap_result[0]);
 		return -1;
 	}
 
 	// Copy RAM to Flash
-	command[0] = IAP_COPY_RAM_FLASH;
-	command[1] = flash_addr;
-	command[2] = (uintptr_t)data;
-	command[3] = FLASH_PROFILE_BLOCK_SIZE;
-	command[4] = IAP_CCLK_KHZ;
-	iap_entry(command, result);
+	iap_command[0] = IAP_COPY_RAM_FLASH;
+	iap_command[1] = flash_addr;
+	iap_command[2] = (uintptr_t)data;
+	iap_command[3] = FLASH_PROFILE_BLOCK_SIZE;
+	iap_command[4] = IAP_CCLK_KHZ;
+	iap_entry(iap_command, iap_result);
 
 	MAMCR = mam_save;
 	VIC_RestoreIRQ(save);
-	if (result[0] != 0) {
-		printf("\n[IAP] Write to 0x%lX failed: code %u\n", (unsigned long)flash_addr, result[0]);
+	if (iap_result[0] != 0) {
+		printf("\n[IAP] Write to 0x%lX failed: code %u\n", (unsigned long)flash_addr, iap_result[0]);
 	}
-	return (result[0] == 0) ? 0 : -1;
+	return (iap_result[0] == 0) ? 0 : -1;
 }
 
 // ---- Cache for sector rewrite ----
