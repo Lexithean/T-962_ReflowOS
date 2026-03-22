@@ -47,40 +47,53 @@ static const FlashProfileBlock_t* flash_profile_ptr(int slot) {
 		(uint32_t)slot * FLASH_PROFILE_BLOCK_SIZE);
 }
 
-static int iap_prepare_sector(void) {
+static int iap_erase_sector(void) {
 	unsigned int command[5], result[3];
+	uint32_t save = VIC_DisableIRQ();
+
+	// Prepare sector (must stay valid until erase)
 	command[0] = IAP_PREPARE_SECTORS;
 	command[1] = FLASH_PROFILE_SECTOR;
 	command[2] = FLASH_PROFILE_SECTOR;
-	uint32_t save = VIC_DisableIRQ();
 	iap_entry(command, result);
-	VIC_RestoreIRQ(save);
-	return (result[0] == 0) ? 0 : -1;
-}
+	if (result[0] != 0) {
+		VIC_RestoreIRQ(save);
+		return -1;
+	}
 
-static int iap_erase_sector(void) {
-	unsigned int command[5], result[3];
-	if (iap_prepare_sector() != 0) return -1;
+	// Erase sector
 	command[0] = IAP_ERASE_SECTORS;
 	command[1] = FLASH_PROFILE_SECTOR;
 	command[2] = FLASH_PROFILE_SECTOR;
 	command[3] = IAP_CCLK_KHZ;
-	uint32_t save = VIC_DisableIRQ();
 	iap_entry(command, result);
+
 	VIC_RestoreIRQ(save);
 	return (result[0] == 0) ? 0 : -1;
 }
 
 static int iap_write_block(uint32_t flash_addr, uint8_t* data) {
 	unsigned int command[5], result[3];
-	if (iap_prepare_sector() != 0) return -1;
+	uint32_t save = VIC_DisableIRQ();
+
+	// Prepare sector (must stay valid until copy)
+	command[0] = IAP_PREPARE_SECTORS;
+	command[1] = FLASH_PROFILE_SECTOR;
+	command[2] = FLASH_PROFILE_SECTOR;
+	iap_entry(command, result);
+	if (result[0] != 0) {
+		VIC_RestoreIRQ(save);
+		return -1;
+	}
+
+	// Copy RAM to Flash
 	command[0] = IAP_COPY_RAM_FLASH;
 	command[1] = flash_addr;
 	command[2] = (uintptr_t)data;
 	command[3] = FLASH_PROFILE_BLOCK_SIZE;
 	command[4] = IAP_CCLK_KHZ;
-	uint32_t save = VIC_DisableIRQ();
 	iap_entry(command, result);
+
 	VIC_RestoreIRQ(save);
 	return (result[0] == 0) ? 0 : -1;
 }
@@ -128,6 +141,7 @@ static int rewrite_sector(int target_slot, const uint16_t* new_temps,
 
 	// Step 3: Write all cached profiles back
 	int new_count = 0;
+	int target_ok = 0;
 	for (int i = 0; i < FLASH_PROFILE_MAX_SLOTS; i++) {
 		if (!cache_valid[i]) {
 			profile_valid[i] = 0;
@@ -147,9 +161,10 @@ static int rewrite_sector(int target_slot, const uint16_t* new_temps,
 		}
 		profile_valid[i] = 1;
 		new_count++;
+		if (i == target_slot) target_ok = 1;
 	}
 	profile_count = new_count;
-	return 0;
+	return target_ok ? 0 : -1;
 }
 
 // ---- Public API ----
