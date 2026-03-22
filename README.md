@@ -2,9 +2,6 @@
 
 **T-962 ReflowOS** is a maintained and improved fork of the [Unified Engineering T-962-improvements](https://github.com/UnifiedEngineering/T-962-improvements) firmware. This project is currently funded and maintained by **[Schemara.com](https://schemara.com)** (the AI-powered PCB & Schematic tools software by **Lexithean**). 
 
-> [!CAUTION]
-> **The current version of this firmware is non-functional.** It is under active development and should not be flashed to your oven. Watch this repo for updates or check back later for a stable release.
-
 > **T-962C users:** See the [T-962C Guide](https://github.com/Lexithean/T-962_ReflowOS/wiki/T-962C-Guide) in the wiki for specific firmware settings and hardware fixes.
 
 > ⚠️ **Compatibility:** This firmware requires a T-962 with the **NXP LPC2134** MCU. Some 2024+ models (V2.0 board) use a different processor and are **not compatible**. [Check your board](https://github.com/Lexithean/T-962_ReflowOS/wiki/Troubleshooting) before flashing.
@@ -57,8 +54,7 @@ This fork merges the following improvements from upstream pull requests that wer
 - **Text-based profile import** — `import profile N t1,t2,...` for easy profile upload without binary protocol (fork addition)
 - **Profile export** — `export profile N` outputs in import-compatible format for round-trip editing (fork addition)
 - **Profile naming** — `name profile N <name>` renames CUSTOM profile slots (fork addition)
-- **Dynamic Flash Profile Storage (v2.1.0)** — Support for up to 30 additional "Flash" profile slots using MCU internal memory (Sector 19, 8KB) (fork addition)
-- **Profile Backup & Restore (v2.1.0)** — Serial commands to dump/reload profiles to prevent data loss during firmware updates (fork addition)
+- **Profile Backup & Restore** — Serial commands to dump/reload EEPROM profiles to prevent data loss during firmware updates (fork addition)
 - **Enhanced Safety Logic (v2.2)** — 'SAFETY ABORT' UI feedback and state reset improvements (fork addition)
 - **PlatformIO support** — Build with `pio run` in addition to `make` (#207)
 
@@ -72,17 +68,14 @@ This fork merges the following improvements from upstream pull requests that wer
 
 The serial interface (115200 baud) allows full control and configuration.
 
-> [!WARNING]
-> **Reflashing erases all Flash Profiles.** Unlike EEPROM settings, profiles stored in the MCU's internal flash ARE wiped when you update the firmware. Always use the `backup` command before updating!
+> [!TIP]
+> Use the `backup` command before updating firmware to export your EEPROM profiles as restorable text.
 
 | Command | Description |
 |---------|-------------|
 | `help` | Show all available commands |
-| `backup` | Dump all profiles (EEPROM + Flash) as restorable text |
-| `list flash` | List all profiles stored in flash memory |
-| `save flash <N> <T1,...>,<Name>` | Save profile to flash slot N (0-29) |
-| `delete flash <N>` | Delete flash profile N |
-| `export profile <ID>` | Export any profile (1-30+) in import format |
+| `backup` | Dump all EEPROM profiles as restorable text |
+| `export profile <ID>` | Export any profile in import format |
 | `import profile <1|2> <Data>` | Import into CUSTOM#1 or CUSTOM#2 EEPROM |
 | `name profile <1|2> <Name>` | Rename CUSTOM#1 or CUSTOM#2 EEPROM |
 | `bake <Temp> [Time]` | Enter bake mode at <Temp> C for [Time] s |
