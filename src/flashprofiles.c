@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "LPC214x.h"
 #include "flashprofiles.h"
 #include "reflow_profiles.h"
 #include "vic.h"
@@ -50,6 +51,8 @@ static const FlashProfileBlock_t* flash_profile_ptr(int slot) {
 static int iap_erase_sector(void) {
 	unsigned int command[5], result[3];
 	uint32_t save = VIC_DisableIRQ();
+	uint32_t mam_save = MAMCR;
+	MAMCR = 0; // Disable MAM during IAP (required by NXP)
 
 	// Prepare sector (must stay valid until erase)
 	command[0] = IAP_PREPARE_SECTORS;
@@ -57,6 +60,7 @@ static int iap_erase_sector(void) {
 	command[2] = FLASH_PROFILE_SECTOR;
 	iap_entry(command, result);
 	if (result[0] != 0) {
+		MAMCR = mam_save;
 		VIC_RestoreIRQ(save);
 		printf("\n[IAP] Prepare for erase failed: code %u\n", result[0]);
 		return -1;
@@ -69,6 +73,7 @@ static int iap_erase_sector(void) {
 	command[3] = IAP_CCLK_KHZ;
 	iap_entry(command, result);
 
+	MAMCR = mam_save;
 	VIC_RestoreIRQ(save);
 	if (result[0] != 0) {
 		printf("\n[IAP] Erase failed: code %u\n", result[0]);
@@ -79,6 +84,8 @@ static int iap_erase_sector(void) {
 static int iap_write_block(uint32_t flash_addr, uint8_t* data) {
 	unsigned int command[5], result[3];
 	uint32_t save = VIC_DisableIRQ();
+	uint32_t mam_save = MAMCR;
+	MAMCR = 0; // Disable MAM during IAP (required by NXP)
 
 	// Prepare sector (must stay valid until copy)
 	command[0] = IAP_PREPARE_SECTORS;
@@ -86,6 +93,7 @@ static int iap_write_block(uint32_t flash_addr, uint8_t* data) {
 	command[2] = FLASH_PROFILE_SECTOR;
 	iap_entry(command, result);
 	if (result[0] != 0) {
+		MAMCR = mam_save;
 		VIC_RestoreIRQ(save);
 		printf("\n[IAP] Prepare for write failed: code %u\n", result[0]);
 		return -1;
@@ -99,6 +107,7 @@ static int iap_write_block(uint32_t flash_addr, uint8_t* data) {
 	command[4] = IAP_CCLK_KHZ;
 	iap_entry(command, result);
 
+	MAMCR = mam_save;
 	VIC_RestoreIRQ(save);
 	if (result[0] != 0) {
 		printf("\n[IAP] Write to 0x%lX failed: code %u\n", (unsigned long)flash_addr, result[0]);
