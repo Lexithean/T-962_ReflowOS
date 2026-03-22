@@ -23,13 +23,13 @@ MEMORY {
   /* Sector 1 (0x2000-0x3FFF) reserved for IAP flash profile storage */
   /* Sectors 2-10: main firmware code */
   MFlash_Code (rx) : ORIGIN = 0x4000, LENGTH = 0x1C000 /* 112KB, sectors 2-10 */
-  /* Top 32 bytes of RAM (0x40003FE0-0x40003FFF) reserved for IAP workspace */
-  Ram16 (rwx)      : ORIGIN = 0x40000000, LENGTH = 0x3FE0 /* 16KB - 32 bytes IAP */
+  /* Top 256 bytes of RAM (0x40003F00-0x40003FFF) reserved for IAP/ISP (per UM10120) */
+  Ram16 (rwx)      : ORIGIN = 0x40000000, LENGTH = 0x3F00 /* 16KB - 256 bytes IAP */
 }
   /* Define a symbol for the top of each memory region */
   __top_MFlash_Vec = 0x0 + 0x2000;
   __top_MFlash_Code = 0x4000 + 0x1C000;
-  __top_Ram16 = 0x40000000 + 0x3FE0;
+  __top_Ram16 = 0x40000000 + 0x3F00;
 
 ENTRY(_start)
 
