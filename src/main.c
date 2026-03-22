@@ -617,6 +617,42 @@ static int32_t Main_Work(void) {
 			} else if (strcmp(serial_cmd, "backup") == 0) {
 				FlashProfiles_BackupAll();
 
+			} else if (strcmp(serial_cmd, "enter isp") == 0) {
+				// Programmatic entry into ISP (bootloader) mode for firmware update
+				// This uses IAP command 57 (Reinvoke ISP) to jump to ROM bootloader
+				printf("\n[ISP] Backing up flash profiles...\n");
+				FlashProfiles_BackupAll();
+				printf("\n[ISP] Shutting down heater and fan...\n");
+				Set_Heater(0);
+				Set_Fan(0);
+				printf("[ISP] Entering bootloader mode...\n");
+				printf("[ISP] Reconnect at 57600 baud to flash firmware.\n");
+				printf("[ISP] Power-cycle oven after flashing completes.\n");
+
+				// Brief delay for serial output to flush
+				for (volatile int i = 0; i < 2000000; i++);
+
+				// Extend watchdog timeout (cannot be disabled once enabled)
+				WDTC = 0xFFFFFFFF;
+				uint32_t save = VIC_DisableIRQ();
+				WDFEED = 0xaa;
+				WDFEED = 0x55;
+				VIC_RestoreIRQ(save);
+
+				// Switch to legacy GPIO mode (bootloader requirement)
+				SCS = 0;
+				// Ensure heater (P0.9) and fan (P0.8) stay off during bootloader
+				IODIR0 = (1 << 8) | (1 << 9);
+				IOSET0 = (1 << 8) | (1 << 9);
+
+				// Enter ISP - this function never returns
+				{
+					static unsigned int isp_cmd[1];
+					static unsigned int isp_res[1];
+					isp_cmd[0] = IAP_REINVOKE_ISP;
+					((void (*)(unsigned int[], unsigned int[]))0x7ffffff1)(isp_cmd, isp_res);
+				}
+
 			} else if (strcmp(serial_cmd, "factory reset") == 0) {
 				NV_FactoryReset();
 				Reflow_ValidateNV();

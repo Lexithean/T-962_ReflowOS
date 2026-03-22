@@ -200,6 +200,31 @@ void FlashProfiles_Init(void) {
 			profile_valid[i] = 0;
 		}
 	}
+
+	// Preload default GC10/GC50 profiles into slots 30-31 if empty
+	if (!profile_valid[30]) {
+		static const uint16_t gc10_temps[48] = {
+			 50,  70,  90, 110, 130, 145, 150, 153, 156, 159, 162, 165,
+			168, 171, 174, 177, 180, 183, 186, 190, 194, 198,
+			205, 215, 230, 240, 245,
+			240, 225, 205, 185, 165, 145, 130, 115, 100,
+			 85,  70,  55,   0,   0,   0,   0,   0,   0,   0,   0,   0
+		};
+		printf("\nPreloading LOCTITE GC 10 into flash slot 30");
+		FlashProfiles_WriteProfile(30, gc10_temps, "LOCTITE GC 10");
+	}
+	if (!profile_valid[31]) {
+		static const uint16_t gc50_temps[48] = {
+			 50,  70,  90, 110, 125, 140, 150, 155, 160, 165, 170, 175,
+			178, 180, 183, 185, 188, 190, 193, 195, 198, 200,
+			210, 225, 240, 245, 245,
+			235, 220, 200, 180, 160, 140, 125, 110,  95,
+			 80,  65,  50,   0,   0,   0,   0,   0,   0,   0,   0,   0
+		};
+		printf("\nPreloading LOCTITE GC 50 into flash slot 31");
+		FlashProfiles_WriteProfile(31, gc50_temps, "LOCTITE GC 50");
+	}
+
 	printf("\nFlash profiles: %d/%d slots used",
 		profile_count, FLASH_PROFILE_MAX_SLOTS);
 }
