@@ -8,6 +8,7 @@
 #include "reflow.h"
 
 #include "reflow_profiles.h"
+#include "flashprofiles.h"
 
 #define RAMPTEST
 #define PIDTEST
@@ -107,6 +108,33 @@ static const profile* profiles[] = {
 // current profile index
 static uint8_t profileidx = 0;
 
+// Flash profile shadow — holds the currently-loaded flash profile in RAM
+static char flash_shadow_name[FLASH_PROFILE_NAME_LEN];
+static ramprofile flash_shadow = { flash_shadow_name };
+static int flash_shadow_slot = -1;  // which flash slot is loaded, -1 = none
+
+// Get the Nth valid flash slot (skipping empty slots)
+// Returns the flash slot number, or -1 if n is out of range
+static int flash_nth_valid(int n) {
+	int count = 0;
+	for (int i = 0; i < FLASH_PROFILE_MAX_SLOTS; i++) {
+		if (FlashProfiles_IsValid(i)) {
+			if (count == n) return i;
+			count++;
+		}
+	}
+	return -1;
+}
+
+// Load a flash profile into the shadow buffer
+static void load_flash_shadow(int slot) {
+	if (slot == flash_shadow_slot) return; // already loaded
+	if (FlashProfiles_Read(slot, flash_shadow.temperatures, flash_shadow_name) == 0) {
+		flash_shadow.name = flash_shadow_name;
+		flash_shadow_slot = slot;
+	}
+}
+
 static void ByteswapTempProfile(uint16_t* buf) {
 	for (int i = 0; i < NUMPROFILETEMPS; i++) {
 		uint16_t word = buf[i];
@@ -178,14 +206,36 @@ int Reflow_GetProfileIdx(void) {
 	return profileidx;
 }
 
+int Reflow_GetTotalProfileCount(void) {
+	return NUMPROFILES + FlashProfiles_GetCount();
+}
+
+int Reflow_IsFlashProfile(void) {
+	return profileidx >= NUMPROFILES;
+}
+
 int Reflow_SelectProfileIdx(int idx) {
+	int total = Reflow_GetTotalProfileCount();
+	if (total == 0) total = NUMPROFILES; // safety
 	if (idx < 0) {
-		profileidx = (NUMPROFILES - 1);
-	} else if(idx >= NUMPROFILES) {
-		profileidx = 0;
-	} else {
-		profileidx = idx;
+		idx = total - 1;
+	} else if (idx >= total) {
+		idx = 0;
 	}
+	profileidx = idx;
+
+	// If in flash range, load the profile into shadow
+	if (profileidx >= NUMPROFILES) {
+		int flash_n = profileidx - NUMPROFILES;
+		int slot = flash_nth_valid(flash_n);
+		if (slot >= 0) {
+			load_flash_shadow(slot);
+		} else {
+			// Invalid — wrap back to first profile
+			profileidx = 0;
+		}
+	}
+
 	NV_SetConfig(REFLOW_PROFILE, profileidx);
 	return profileidx;
 }
@@ -235,9 +285,21 @@ void Reflow_ListProfiles(void) {
 	for (int i = 0; i < NUMPROFILES; i++) {
 		printf("%d: %s\n", i, profiles[i]->name);
 	}
+	int fc = FlashProfiles_GetCount();
+	if (fc > 0) {
+		printf("--- Flash profiles ---\n");
+		for (int i = 0; i < FLASH_PROFILE_MAX_SLOTS; i++) {
+			if (FlashProfiles_IsValid(i)) {
+				printf("F%d: %s\n", i, FlashProfiles_GetName(i));
+			}
+		}
+	}
 }
 
 const char* Reflow_GetProfileName(void) {
+	if (profileidx >= NUMPROFILES) {
+		return flash_shadow.name;
+	}
 	return profiles[profileidx]->name;
 }
 
@@ -245,12 +307,16 @@ uint16_t Reflow_GetSetpointAtIdx(uint8_t idx) {
 	if (idx > (NUMPROFILETEMPS - 1)) {
 		return 0;
 	}
+	if (profileidx >= NUMPROFILES) {
+		return flash_shadow.temperatures[idx];
+	}
 	return profiles[profileidx]->temperatures[idx];
 }
 
 void Reflow_SetSetpointAtIdx(uint8_t idx, uint16_t value) {
 	if (idx > (NUMPROFILETEMPS - 1)) { return; }
 	if (value > SETPOINT_MAX) { return; }
+	if (profileidx >= NUMPROFILES) { return; } // Flash profiles are read-only
 
 	uint16_t* temp = (uint16_t*) &profiles[profileidx]->temperatures[idx];
 	if (temp >= (uint16_t*)0x40000000) {
@@ -263,7 +329,7 @@ void Reflow_PlotProfile(int highlight) {
 
 	for(int x = 0; x < NUMPROFILETEMPS; x++) {
 		int realx = (x << 1) + XAXIS;
-		int y = profiles[profileidx]->temperatures[x] / 5;
+		int y = Reflow_GetSetpointAtIdx(x) / 5;
 		y = YAXIS - y;
 		LCD_SetPixel(realx, y);
 
