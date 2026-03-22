@@ -3,11 +3,11 @@
 
 #include <stdint.h>
 
-// LPC2134 sector 7: 8KB at 0xE000-0xFFFF
+// LPC2134 sector 1: 8KB at 0x2000-0x3FFF
 // Each profile occupies one 256-byte block (IAP minimum write size)
-#define FLASH_PROFILE_SECTOR     7
-#define FLASH_PROFILE_BASE       0xE000
-#define FLASH_PROFILE_END        0x10000
+#define FLASH_PROFILE_SECTOR     1
+#define FLASH_PROFILE_BASE       0x2000
+#define FLASH_PROFILE_END        0x4000
 #define FLASH_PROFILE_BLOCK_SIZE 256
 #define FLASH_PROFILE_MAX_SLOTS  32      // 8KB / 256 bytes = 32
 #define FLASH_PROFILE_NAME_LEN   20      // Including null terminator
