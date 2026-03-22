@@ -54,7 +54,8 @@ This fork merges the following improvements from upstream pull requests that wer
 - **Text-based profile import** — `import profile N t1,t2,...` for easy profile upload without binary protocol (fork addition)
 - **Profile export** — `export profile N` outputs in import-compatible format for round-trip editing (fork addition)
 - **Profile naming** — `name profile N <name>` renames CUSTOM profile slots (fork addition)
-- **Profile Backup & Restore** — Serial commands to dump/reload EEPROM profiles to prevent data loss during firmware updates (fork addition)
+- **Flash Profile Storage** — Up to 32 additional reflow profiles stored in MCU flash (sector 10) via IAP. Serial commands: `save flash`, `delete flash`, `list flash` (fork addition)
+- **Profile Backup & Restore** — `backup` command dumps all profiles (EEPROM + flash) as restorable serial text to prevent data loss during firmware updates (fork addition)
 - **Enhanced Safety Logic (v2.2)** — 'SAFETY ABORT' UI feedback and state reset improvements (fork addition)
 - **PlatformIO support** — Build with `pio run` in addition to `make` (#207)
 
