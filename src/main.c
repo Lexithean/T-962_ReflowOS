@@ -113,6 +113,19 @@ static const char* temp_unit(void) {
 
 static int32_t Main_Work(void);
 
+// Direct UART output - bypasses printf/IRQ entirely for crash debugging
+static void dbg_putc(char c) {
+	volatile unsigned int* U0THR_p = (volatile unsigned int*)0xe000c000;
+	volatile unsigned int* U0LSR_p = (volatile unsigned int*)0xe000c014;
+	while (!(*U0LSR_p & 0x20)); // Wait for THRE
+	*U0THR_p = c;
+}
+static void dbg_marker(char id) {
+	dbg_putc('[');
+	dbg_putc(id);
+	dbg_putc(']');
+}
+
 int main(void) {
 	char buf[22];
 	int len=0;
@@ -161,9 +174,13 @@ int main(void) {
 	Buzzer_Init();
 	ADC_Init();
 	RTC_Init();
+	dbg_marker('A'); // Before OneWire_Init
 	OneWire_Init();
+	dbg_marker('B'); // After OneWire_Init, before SPI_TC_Init
 	SPI_TC_Init();
+	dbg_marker('C'); // After SPI_TC_Init, before Reflow_Init
 	Reflow_Init();
+	dbg_marker('D'); // After Reflow_Init
 
 	SystemFan_Init();
 	printf("\nCurrent Operational Mode: "); Sensor_printOpMode(); printf("\n");
