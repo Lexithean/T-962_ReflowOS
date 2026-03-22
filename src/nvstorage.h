@@ -45,5 +45,6 @@ void NV_Init(void);
 uint8_t NV_GetConfig(NVItem_t item);
 void NV_SetConfig(NVItem_t item, uint8_t value);
 int32_t NV_Work(void);
+void NV_FactoryReset(void);
 
 #endif /* NVSTORAGE_H_ */

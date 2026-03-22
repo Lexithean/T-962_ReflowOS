@@ -94,3 +94,9 @@ int32_t NV_Work(void) {
 	}
 	return nvupdatepending ? (TICKS_SECS(2)) : -1;
 }
+
+void NV_FactoryReset(void) {
+	memset(myNV.config, 0xff, NVITEM_NUM_ITEMS);
+	EEPROM_Write(NV_STORAGE_OFFSET, (uint8_t*)&myNV, sizeof(myNV));
+	printf("\nFactory reset complete — all settings cleared to defaults.\n");
+}

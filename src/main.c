@@ -98,6 +98,7 @@ static char* help_text = \
 " pidtune                 Run PID auto-tune\n" \
 " tccal                   Run TC offset auto-calibration\n" \
 " values                  Dump currently measured values\n" \
+" factory reset            Reset all settings to defaults\n" \
 "\n";
 
 
@@ -615,6 +616,12 @@ static int32_t Main_Work(void) {
 
 			} else if (strcmp(serial_cmd, "backup") == 0) {
 				FlashProfiles_BackupAll();
+
+			} else if (strcmp(serial_cmd, "factory reset") == 0) {
+				NV_FactoryReset();
+				Reflow_ValidateNV();
+				Reflow_LoadCustomProfiles();
+				printf("\nReboot recommended.\n");
 
 			} else {
 				printf("\nCannot understand command, ? for help\n");
